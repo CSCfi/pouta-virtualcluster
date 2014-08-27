@@ -42,7 +42,14 @@ Provisioning VMs for cluster goes roughly like this:
 * Missing VMs are provisioned
 
   - first frontend, then appropriate number of nodes
-  - naming: *[cluster-name]-fe* and *[cluster-name]-node[number]*
+  - naming: *[cluster-name]-fe* and *[cluster-name]-node[number]*. If your cluster name was be *my-cluster*,
+    you would get
+
+      + my-cluster-fe
+      + my-cluster-node01
+      + my-cluster-node02
+      + ...
+
   - VMs are launched from the specified image with specified flavor
   - volumes are created or reused and attached
   - template security groups are created if these don't exist already
@@ -144,6 +151,8 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 * import the key::
 
     nova keypair-add  --pub-key .ssh/id_rsa.pub cluster-key
+
+* TODO: .ssh/config: StrictHostKeyChecking
 
 Installation
 ============
@@ -352,3 +361,5 @@ Missing bits
 * Spark does not start automatically after a reboot. To start it run::
 
     [root@fe /root]# /opt/spark/sbin/start-all.sh
+
+
