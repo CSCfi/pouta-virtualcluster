@@ -159,10 +159,11 @@ Installation
 
 Next we install *poutacluster* on the bastion host::
 
-    git clone https://github.com/CSC-IT-Center-for-Science/pouta-helper
+    cd
+    git clone https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
     mkdir ~/bin
-    ln -s ~/pouta-helper/python/poutacluster.py ~/bin/poutacluster
-    ln -s ~/pouta-helper/ansible ~/ansible
+    ln -s ~/pouta-virtualcluster/python/poutacluster.py ~/bin/poutacluster
+    ln -s ~/pouta-virtualcluster/ansible ~/ansible
 
 Now *poutacluster -h* should give you basic usage. See examples below for more details.
 
