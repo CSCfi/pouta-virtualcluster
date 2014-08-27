@@ -1,0 +1,15 @@
+---
+- name: restart sshd
+  action: service name=sshd state=restarted
+
+- name: restart iptables
+  action: service name=iptables state=restarted
+
+- name: reload exports
+  action: shell exportfs -r
+
+- name: ensure nfs service is running
+  service: name=nfs state=started
+
+- name: kill-HUP sshd
+  shell: pkill -HUP sbin/sshd

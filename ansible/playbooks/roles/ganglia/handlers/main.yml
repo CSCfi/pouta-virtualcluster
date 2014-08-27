@@ -1,0 +1,9 @@
+- name: restart apache
+  action: service name=httpd state=restarted
+
+- name: restart gmond
+  action: service name=gmond state=restarted
+
+- name: restart gmetad
+  action: command service gmetad restart
+  when: '"ganglia_master" in group_names'

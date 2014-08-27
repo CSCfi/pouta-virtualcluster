@@ -1,0 +1,29 @@
+---
+- name: Common configuration
+  hosts: ge_master:ge_slave
+  sudo: yes
+  tasks:
+    - include: common/tasks/packages.yml
+    - include: common/tasks/iptables.yml trusted_hosts="{{ groups.all }}"
+  handlers:
+    - include: common/handlers/main.yml
+
+- name: GridEngine masternode play
+  hosts: ge_master
+  sudo: yes
+  tasks: 
+    - include: gridengine/tasks/frontend.yml
+    - action: shell bash -lc 'qconf -mattr queue slots 16 all.q'
+    - include: common/tasks/nfs.yml
+  handlers:
+    - include: common/handlers/main.yml
+
+- name: GridEngine worker nodes play
+  hosts: ge_slave
+  sudo: yes
+  tasks: 
+    - include: common/tasks/nfs-clients.yml nfsserver="{{ groups.ge_master[0] }}" nfspath=/usr/share/gridengine/default/common nfsmount=/usr/share/gridengine/default/common
+    - include: gridengine/tasks/nodes.yml
+  handlers:
+    - include: common/handlers/main.yml
+

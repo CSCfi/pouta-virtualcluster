@@ -1,0 +1,34 @@
+---
+- name: Install ganglia server (CentOS)
+  action: yum pkg="{{ item }}" state=latest
+  with_items:
+    - ganglia-gmond
+    - ganglia-gmetad
+    - ganglia-web
+  tags:
+    - ganglia
+
+- name: Configure apache to allow access to ganglia from everywere
+  action: copy src=ganglia/files/etc/httpd/conf.d/ganglia.conf dest=/etc/httpd/conf.d/ganglia.conf
+  notify: restart apache
+  tags:
+    - ganglia
+
+- name: Configure gmetad
+  action: template src=ganglia/templates/gmetad.conf.j2 dest=/etc/ganglia/gmetad.conf
+  notify: restart gmetad
+  tags:
+    - ganglia
+
+- name: Ensure httpd is running
+  action: service name=httpd state=started enabled=true
+  tags:
+    - ganglia
+
+- name: Ensure ganglia daemons are running
+  action: service name="{{ item }}" state=started enabled=true
+  with_items:
+    - gmond
+    - gmetad
+  tags:
+    - ganglia

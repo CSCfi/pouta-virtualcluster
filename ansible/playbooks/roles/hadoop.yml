@@ -1,0 +1,59 @@
+---
+- hosts: hadoop_namenode:hadoop_secnamenode:hadoop_datanode:hadoop_jobtracker:hadoop_tasktracker
+  name: Prerequisites for Hadoop
+  sudo: yes
+  vars_files:
+    - vars/os
+  tasks:
+    - include: common/tasks/iptables.yml trusted_hosts="{{ groups.all }}" default_accept=1
+    - action: filesystem fstype=ext4 dev=/dev/vdc opts="-L data"  
+    - name: mount /mnt/data
+      action: mount name=/mnt/data src=LABEL=data fstype=auto opts=rw,nofail state=mounted
+    
+  handlers:
+    - include: common/handlers/main.yml
+
+- hosts: hadoop_namenode:hadoop_secnamenode:hadoop_datanode:hadoop_jobtracker:hadoop_tasktracker
+  name: Install Hadoop
+  sudo: yes
+  vars_files:
+    - vars/os
+  vars:
+    deburl: http://www.nic.funet.fi/pub/mirrors/apache.org/hadoop/common/hadoop-1.2.1/hadoop_1.2.1-1_x86_64.deb
+    rpmurl: http://www.nic.funet.fi/pub/mirrors/apache.org/hadoop/common/hadoop-1.2.1/hadoop-1.2.1-1.x86_64.rpm
+    hd_confdir: "/etc/hadoop/"
+    hd_tmpdir: "/mnt/data/hadoop"
+    mapred_localdir: "{{ hd_tmpdir }}/mapred"
+    hd_namedir: "{{ hd_tmpdir }}/dfs/name"
+    hd_datadir: "{{ hd_tmpdir }}/dfs/data"
+    hdfs_replication: 2
+
+  tasks: 
+    - include: hadoop/tasks/packages.yml
+    - include: hadoop/tasks/conf.yml
+
+    - name: Start name daemon
+      action: service name=hadoop-namenode state=started enabled=yes
+      when: inventory_hostname in groups.hadoop_namenode
+
+    - name: Start data daemons
+      action: service name=hadoop-datanode state=started enabled=yes
+      when: inventory_hostname in groups.hadoop_datanode
+
+    - name: Start job tracker (=mapred master)
+      action: service name=hadoop-jobtracker state=started enabled=yes
+      when: inventory_hostname in groups.hadoop_jobtracker
+
+    - name: Start task trackers (=mapred slaves)
+      action: service name=hadoop-tasktracker state=started enabled=yes
+      when: inventory_hostname in groups.hadoop_tasktracker
+
+    - name: Make the hdfs:/ root world writable
+      action: shell HADOOP_USER_NAME=hdfs hadoop dfs -chmod 777 /
+
+    - name: Create hdfs:/tmp/hadoop-root/mapred directory
+      action: shell hadoop dfs -mkdir /tmp/hadoop-root/mapred ; echo done
+
+    - name: Set dfs /tmp/hadoop-root/mapred directory world-writable
+      action: shell hadoop dfs -chmod 777 /tmp/hadoop-root/mapred
+

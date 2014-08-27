@@ -1,0 +1,25 @@
+---
+#
+# Master playbook for generic cluster on Pouta.
+#
+# Ansible playbooks based on ElastiCluster
+# https://github.com/gc3-uzh-ch/elasticluster
+# 
+
+# common stuff for all groups
+- include: roles/common.yml
+
+# common setup for master - slave
+- include: roles/cluster.yml
+
+# ganglia for monitoring
+- include: roles/ganglia.yml
+
+# gridengine for batch prosessing
+- include: roles/gridengine.yml
+
+# Hadoop/HDFS for map reduce and distributed filesystem
+- include: roles/hadoop.yml
+
+# Spark for next gen map reduce, runs on HDFS
+- include: roles/spark.yml

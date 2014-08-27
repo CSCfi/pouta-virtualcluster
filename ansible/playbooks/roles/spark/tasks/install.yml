@@ -1,0 +1,16 @@
+---
+- name: install dependencies
+  yum: pkg="{{ item }}" state=present
+  with_items:
+    - java-openjdk
+
+- name: download Spark
+  get_url: url="{{ tar_url }}" dest=/tmp/spark-{{ spark_version }}-bin-{{ spark_flavor }}.tar.gz
+
+- name: extract Spark
+  command: creates=/opt/spark-{{ spark_version }}-bin-{{ spark_flavor }} /bin/tar xfz /tmp/spark-{{ spark_version }}-bin-{{ spark_flavor }}.tar.gz -C /opt
+
+- name: create a shortcut symlink to the extracted directory
+  file: state=link src=/opt/spark-{{ spark_version }}-bin-{{ spark_flavor }} dest=/opt/spark
+  
+    

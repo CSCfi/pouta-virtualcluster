@@ -1,0 +1,4 @@
+group_name @allhosts
+hostlist {% for host in groups['ge_slave'] %}
+ {{ host }}
+{%- endfor %}

@@ -1,0 +1,13 @@
+---
+- name: Update and reboot
+  hosts: all
+  sudo: yes
+  tasks:
+  - name: clean yum state
+    action: shell yum clean all
+
+  - name: update packages
+    yum: name=* state=latest
+
+  - name: reboot
+    action: shell reboot

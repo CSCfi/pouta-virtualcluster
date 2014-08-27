@@ -1,0 +1,20 @@
+---
+- name: install nfs server
+  action: yum pkg=nfs-utils state=present
+  tags:
+    - nfs
+
+- name: install nfs client
+  action: yum pkg=nfs-utils state=present
+  tags:
+    -nfs
+
+# CentOS does not start needed services after installation
+- name: ensure nfs service is running (CentOS)
+  action: service name="{{ item }}" state=started
+  tags:
+    - nfs
+  with_items:
+    - rpcbind
+    - nfslock
+    - nfs

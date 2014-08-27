@@ -1,0 +1,19 @@
+---
+- hosts: spark_master:spark_slave
+  name: Install Spark
+  sudo: yes
+  vars_files:
+    - vars/os
+  vars:
+    spark_version: "1.0.1"
+    spark_flavor: "hadoop1"
+    tar_url: "http://www.eu.apache.org/dist/spark/spark-{{ spark_version }}/spark-{{ spark_version }}-bin-{{ spark_flavor }}.tgz"
+    spark_confdir: "/opt/spark/conf"
+    spark_localdir: "/mnt/data/spark-local"
+  tasks: 
+    - include: spark/tasks/install.yml
+    - include: spark/tasks/conf.yml
+
+    - name: Start Spark master and slaves on master
+      action: command /opt/spark/sbin/start-all.sh
+      when: inventory_hostname in groups.spark_master

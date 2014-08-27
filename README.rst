@@ -164,6 +164,7 @@ Next we install *poutacluster* on the bastion host::
     mkdir ~/bin
     ln -s ~/pouta-virtualcluster/python/poutacluster.py ~/bin/poutacluster
     ln -s ~/pouta-virtualcluster/ansible ~/ansible
+    cp ~/pouta-virtualcluster/ansible/cfg/ansible-centos6.cfg ~/.ansible.cfg
 
 Now *poutacluster -h* should give you basic usage. See examples below for more details.
 
@@ -356,6 +357,8 @@ Missing bits
 * support for Ubuntu
 
 * online resize
+
+* persistent home directory
 
 * HDFS resize has to be done manually when scaling down
 

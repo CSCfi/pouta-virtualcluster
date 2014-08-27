@@ -1,0 +1,6 @@
+---
+- name: Update /etc/sysconfig/network file
+  action: lineinfile dest=/etc/sysconfig/network regexp=^HOSTNAME= line=HOSTNAME="{{ inventory_hostname }}"
+
+- name: set hostname to current ansible name
+  action: command hostname {{ inventory_hostname }}

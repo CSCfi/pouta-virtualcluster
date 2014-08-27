@@ -1,0 +1,8 @@
+---
+- name: Install GridEngine RPM packages
+  action: yum pkg="{{ item }}" state=latest
+  with_items:
+    - gridengine-execd
+
+- name: ensure execd daemon is running
+  action: service name=sge_execd state=running enabled=yes

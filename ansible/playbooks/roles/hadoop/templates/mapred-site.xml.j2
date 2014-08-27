@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!-- 
+    THIS FILE IS CONTROLLED BY ANSIBLE
+    any local modifications will be overwritten!
+-->
+<!-- Put site-specific property overrides in this file. -->
+<configuration>
+	<property>
+		<name>mapred.job.tracker</name>
+		<value>{{ groups['hadoop_jobtracker'][0] }}:9001</value>
+	</property>
+	<property>
+		<name>mapred.local.dir</name>
+		<value>{{ mapred_localdir }}</value>
+	</property>
+
+    <!-- setup an exclude file for clean shrink/shutdown -->
+	<property>
+		<name>mapred.hosts.exclude</name>
+		<value>{{ hd_confdir }}/hosts.exclude</value>
+	</property>
+
+    <!-- set the number of slots -->
+	<property>
+		<name>mapred.tasktracker.map.tasks.maximum</name>
+		<value>4</value>
+	</property>
+	<property>
+		<name>mapred.tasktracker.reduce.tasks.maximum</name>
+		<value>4</value>
+	</property>
+
+    
+    <!-- snappy compression on -->
+	<property>
+		<name>mapred.compress.map.output</name>
+		<value>true</value>
+		</property>
+	<property>
+		<name>mapred.map.output.compression.codec</name>
+		<value>org.apache.hadoop.io.compress.SnappyCodec</value>
+	</property>     
+</configuration>

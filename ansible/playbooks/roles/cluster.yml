@@ -1,0 +1,35 @@
+---
+- hosts: cluster_master
+  name: Cluster master preparation
+  sudo: yes
+  tasks:
+    - include: common/tasks/nfs.yml
+    - action: filesystem fstype=ext4 dev=/dev/vdd opts="-L shared"
+    - action: mount name=/shared_data src='LABEL=shared' state=mounted opts=defaults fstype=ext4
+    - action: nfsexport path=/shared_data dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,async
+    - action: nfsexport path=/home dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,sync
+    - action: shell exportfs -a
+    - action: service name=nfs state=started enabled=true
+    - action: yum name=pdsh state=present
+  handlers:
+    - include: common/handlers/main.yml
+
+- hosts: cluster_master:cluster_slave
+  name: Common cluster preparation
+  sudo: yes
+  vars_files:
+    - vars/os
+  tasks:
+    - include: common/tasks/iptables.yml trusted_hosts="{{ groups.all }}" default_accept=1
+    - action: filesystem fstype=ext4 dev=/dev/vdc opts="-L data"
+    - name: mount /mnt/data
+      action: mount name=/mnt/data src=LABEL=data fstype=auto opts=rw,nofail state=mounted
+  handlers:
+    - include: common/handlers/main.yml
+
+- hosts: cluster_slave
+  name: Cluster slave preparation
+  sudo: yes
+  tasks:
+    - include: common/tasks/nfs-clients.yml nfsserver="{{ groups.cluster_master[0] }}" nfspath=/home nfsmount=/home
+    - include: common/tasks/nfs-clients.yml nfsserver="{{ groups.cluster_master[0] }}" nfspath=/shared_data nfsmount=/shared_data

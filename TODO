@@ -1,0 +1,28 @@
+# TODO: resize - add or remove nodes, check first that all are alive
+# TODO: boot from volume (as default?) and static IPs
+# TODO: parallel provisioning
+# TODO: dynamic public IP allocation
+# TODO: (ansible) automatic Spark startup
+# TODO: (ansible) disable IPv6 (?)
+
+# DONE:
+# add proper info command
+# handle multiple networks in tenant
+# print urls for web interfaces after provisioning
+# convert update and reboot to a play
+# run ansible provisioning automatically
+# (ansible) automatic Hadoop startup
+# configurable admin account instead of 'centos'
+# REJECT: add users from cluster.yml(?)
+# rate-limit reset_nodes
+# (ansible) add gridengine
+# (ansible) separate common cluster setup from hadoop
+# (ansible) add ganglia
+# add reset command
+# REJECT: fix playbooks to support generic frontend / node notation for hosts
+# support groups/roles in config and generate the ansible inventory dynamically
+# (ansible) format shared_data and local_data in playbook if necessary
+# write log about provisioning actions
+# delete a single volume at a time
+# clean shutdown
+# write ansible inventory
