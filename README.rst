@@ -133,10 +133,10 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 
 * import your OpenStack command line access configuration
 
-   - see https://research.csc.fi/pouta-credentials how to export the openrc
-   - use scp to copy the file to bastion from your workstation::
+  - see https://research.csc.fi/pouta-credentials how to export the openrc
+  - use scp to copy the file to bastion from your workstation::
 
-        [me@workstation]$ scp openrc.sh root@86.50.168.XXX:
+    [me@workstation]$ scp openrc.sh root@86.50.168.XXX:
 
 * test the clients (enter your Pouta password when asked for)::
 
@@ -188,14 +188,14 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
 
 * check, edit or fill in:
 
-   - cluster name
-   - ssh-key name
-   - public IP
-   - image
-   - flavors
-   - volume sizes (NOTE: when testing, keep the volume size small, otherwise deleting the cluster storage will take
+  - cluster name
+  - ssh-key name
+  - public IP
+  - image
+  - flavors
+  - volume sizes (NOTE: when testing, keep the volume size small, otherwise deleting the cluster storage will take
      a long time). Keep the volume names and order as they are.
-   - groups - you can comment out software groups that you don't need
+  - groups - you can comment out software groups that you don't need
 
 * bring the cluster up with a frontend and two nodes::
 
