@@ -398,7 +398,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['up', 'down', 'info', 'destroy_volumes', 'configure'])
+    parser.add_argument('command', choices=['up', 'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure'])
     parser.add_argument(
         'num_nodes', metavar='num nodes', nargs='?', type=int, help='number of nodes')
     args, commands = parser.parse_known_args()
