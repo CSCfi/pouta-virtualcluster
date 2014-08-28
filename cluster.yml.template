@@ -1,0 +1,38 @@
+---
+cluster:
+  name: my-cluster
+  description: Testing poutacluster provisioning
+  network: default
+frontend:
+  sec-key: cluster-key
+  image: CentOS 6.5
+  admin-user: root
+  flavor: mini
+  public-ip: 86.50.168.XXX
+  volumes:
+    - name: local_data
+      size: 10
+    - name: shared_data
+      size: 10
+  groups:
+    - cluster_master
+    - ganglia_master
+    - hadoop_namenode
+    - hadoop_jobtracker
+    - spark_master
+    - ge_master
+node:
+  sec-key: cluster-key
+  image: CentOS 6.5
+  admin-user: root
+  flavor: small
+  volumes:
+    - name: local_data
+      size: 10
+  groups:
+    - cluster_slave
+    - ganglia_monitor
+    - hadoop_datanode
+    - hadoop_tasktracker
+    - spark_slave
+    - ge_slave
