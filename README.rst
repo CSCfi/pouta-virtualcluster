@@ -126,10 +126,10 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 
     yum update -y && reboot
 
-* install EPEL repo, openssh-clients, bash-completion, git and OpenStack clients::
+* install EPEL repo, openssh-clients, bash-completion, git, Python yaml-support and OpenStack clients::
 
     rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-    yum install -y bash-completion openssh-clients python-novaclient python-cinderclient git
+    yum install -y bash-completion openssh-clients python-novaclient python-cinderclient git python-yaml
 
 * import your OpenStack command line access configuration
 
@@ -180,8 +180,9 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
     mkdir ~/my-cluster
     cd ~/my-cluster
 
-* copy *~/pouta-helper/cluster.yml.template* to *~/my-cluster/cluster.yml* and open it for editing::
+* copy cluster.yml.template* to *~/my-cluster/cluster.yml* and open it for editing::
 
+    cp ~/pouta-virtualcluster/cluster.yml.template cluster.yml
     vi cluster.yml
 
 * you can also edit the definition on your workstation and then copy it over to the bastion
