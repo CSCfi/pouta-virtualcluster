@@ -126,10 +126,10 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 
     yum update -y && reboot
 
-* install EPEL repo, openssh-clients, bash-completion, git, Python yaml-support and OpenStack clients::
+* install EPEL repo, openssh-clients, bash-completion, git, Python yaml-support, Ansible and OpenStack clients::
 
     rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-    yum install -y bash-completion openssh-clients python-novaclient python-cinderclient git python-yaml
+    yum install -y bash-completion openssh-clients python-novaclient python-cinderclient git python-yaml ansible
 
 * import your OpenStack command line access configuration
 
@@ -158,6 +158,7 @@ Installation
 
 Next we install *poutacluster* on the bastion host::
 
+    yum install ansible -y
     cd
     git clone https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
     mkdir ~/bin
@@ -180,12 +181,13 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
     mkdir ~/my-cluster
     cd ~/my-cluster
 
-* copy cluster.yml.template* to *~/my-cluster/cluster.yml* and open it for editing::
+* copy *cluster.yml.template* to *~/my-cluster/cluster.yml* and open it for editing::
 
     cp ~/pouta-virtualcluster/cluster.yml.template cluster.yml
     vi cluster.yml
 
-* you can also edit the definition on your workstation and then copy it over to the bastion
+* you can also edit the definition on your workstation and then copy it over to the bastion. The template can
+be found at https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
 
 * check, edit or fill in:
 
