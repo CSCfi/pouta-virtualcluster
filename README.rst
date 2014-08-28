@@ -152,7 +152,6 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 
     nova keypair-add  --pub-key .ssh/id_rsa.pub cluster-key
 
-* TODO: .ssh/config: StrictHostKeyChecking
 
 Installation
 ============
@@ -306,7 +305,8 @@ Some useful admin commands::
 Spark
 -----
 Word count example with a random 6MB file found in the internet containing text. The file is concatenated 10000 times,
-resulting 61GB of text data. Make sure you have big enough *shared_data* and *local_data* -volumes provisioned.
+resulting 61GB of text data. Make sure you have big enough *shared_data* and *local_data* -volumes provisioned. Another
+good source of big text is Wikipedia database dumps (http://en.wikipedia.org/wiki/Wikipedia:Database_download).
 
 First download some ascii text and concatenate it to NFS shared directory::
 
