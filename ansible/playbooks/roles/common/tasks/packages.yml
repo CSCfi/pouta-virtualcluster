@@ -16,3 +16,8 @@
   with_items:
   - btrfs-progs
   - tree
+  - wget
+  - tmux
+  - bash-completion
+  - dstat
+
