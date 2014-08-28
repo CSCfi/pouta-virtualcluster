@@ -177,7 +177,7 @@ def delete_volume_by_id(client, vol_id, wait_for_deletion=False):
                 if vol.id == vol_id:
                     status = vol.status
                     break
-            time.sleep(5)
+            time.sleep(30)
 
 
 def get_addresses(instance, ip_type='fixed'):
