@@ -196,8 +196,7 @@ be found at https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
   - public IP
   - image
   - flavors
-  - volume sizes (NOTE: when testing, keep the volume size small, otherwise deleting the cluster storage will take
-     a long time). Keep the volume names and order as they are.
+  - volume sizes (NOTE: when testing, keep the volume size small, otherwise deleting the cluster storage will take a long time). Keep the volume names and order as they are.
   - groups - you can comment out software groups that you don't need
 
 * bring the cluster up with a frontend and two nodes::
