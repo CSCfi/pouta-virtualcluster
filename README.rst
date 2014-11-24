@@ -118,9 +118,13 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 
 * Associate a floating IP (allocate one for the project if you don't already have a spare)
 
-* Log in to the bastion host with ssh as either *root* or *centos* user, depending on the image::
+* Log in to the bastion host with ssh as either *cloud-user* or *ubuntu* user, depending on the image::
 
-    ssh root@86.50.168.XXX:
+    ssh cloud-user@86.50.168.XXX:
+    
+* Run commands requiring superuser privileges with sudo or switch to root user with:: 
+    
+    sudo -i
 
 * update the system and reboot to bring the host up to date::
 
@@ -136,7 +140,7 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
   - see https://research.csc.fi/pouta-credentials how to export the openrc
   - use scp to copy the file to bastion from your workstation::
 
-    [me@workstation]$ scp openrc.sh root@86.50.168.XXX:
+    [me@workstation]$ scp openrc.sh cloud-user@86.50.168.XXX:
 
 * test the clients (enter your Pouta password when asked for)::
 
