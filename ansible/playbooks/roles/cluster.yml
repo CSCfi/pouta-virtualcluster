@@ -8,8 +8,8 @@
     - action: mount name=/shared_data src='LABEL=shared' state=mounted opts=defaults fstype=ext4
     - action: nfsexport path=/shared_data dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,async
     - action: nfsexport path=/home dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,sync
+    - action: shell service nfs start
     - action: shell exportfs -a
-    - action: service name=nfs state=started enabled=true
     - action: yum name=pdsh state=present
   handlers:
     - include: common/handlers/main.yml

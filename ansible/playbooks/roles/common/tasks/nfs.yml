@@ -9,7 +9,7 @@
   tags:
     -nfs
 
-# CentOS does not start needed services after installation
+# CentOS 6 does not start needed services after installation
 - name: ensure nfs service is running (CentOS)
   action: service name="{{ item }}" state=started
   tags:
@@ -18,3 +18,5 @@
     - rpcbind
     - nfslock
     - nfs
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == 6
+
