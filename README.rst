@@ -347,7 +347,7 @@ Note: Spark is lazy in evaluating the expressions, so no processing will be done
 
 Then test HDFS to HDFS::
 
-    val bigfile = sc.textFile("hdfs://mycluster-fe:9000/sparktest/bigfile.txt.x10000")
+    val bigfile = sc.textFile("hdfs://mycluster-fe:9000/sparktest/big.txt.x10000")
     val counts = bigfile.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
     counts.saveAsTextFile("hdfs://mycluster-fe:9000/sparktest/output-2")
 
