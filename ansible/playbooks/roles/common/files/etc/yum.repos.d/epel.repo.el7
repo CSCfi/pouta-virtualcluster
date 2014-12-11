@@ -1,0 +1,11 @@
+# THIS FILE IS CONTROLLED BY ANSIBLE,
+# any local modifications will be overwritten!
+# If you want to make changes, please edit the
+# master file.
+
+[epel]
+name=Extra Packages for Enterprise Linux 7 – x86_64
+baseurl=http://www.nic.funet.fi/pub/mirrors/fedora.redhat.com/pub/epel/7/x86_64/
+enabled=1
+gpgcheck=0
+
