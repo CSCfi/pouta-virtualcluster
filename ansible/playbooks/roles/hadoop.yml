@@ -42,12 +42,15 @@
 
     - name: Make the hdfs:/ root world writable
       action: shell HADOOP_USER_NAME=hdfs hadoop dfs -chmod 777 /
+      when: inventory_hostname in groups.hadoop_namenode
 
     - name: Create hdfs:/tmp/hadoop-root/mapred directory
       action: shell hadoop dfs -mkdir /tmp/hadoop-root/mapred ; echo done
+      when: inventory_hostname in groups.hadoop_namenode
 
     - name: Set dfs /tmp/hadoop-root/mapred directory world-writable
       action: shell hadoop dfs -chmod 777 /tmp/hadoop-root/mapred
+      when: inventory_hostname in groups.hadoop_namenode
 
     - name: Start job tracker (=mapred master)
       action: service name=hadoop-jobtracker state=started enabled=yes
