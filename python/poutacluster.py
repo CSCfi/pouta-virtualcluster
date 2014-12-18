@@ -98,26 +98,50 @@ class Cluster(object):
 
             vd = chr(ord(vd) + 1)
 
-    def __provision_frontend(self):
-        fe_name = self.name + '-fe'
-        sec_group = fe_name
+    def __provision_sec_groups(self):
+
+        # first external access group
+        sg_name_ext = self.name + '-ext'
+
         try:
-            oaw.check_secgroup_exists(self.nova_client, sec_group)
+            oaw.check_secgroup_exists(self.nova_client, sg_name_ext)
         except RuntimeError:
             print
-            print 'No security group for %s exists, creating an empty placeholder' % sec_group
+            print 'No security group for external access exists, creating an empty placeholder'
             print 'NOTE: you will need to add the rules afterwards through '
             print
-            print '      nova secgroup-add-rule %s ...' % sec_group
+            print '      nova secgroup-add-rule %s ...' % sg_name_ext
             print
             print '      or through the web interface'
             print
-            oaw.create_sec_group(self.nova_client, sec_group, 'Security group for %s frontend' % self.name)
+            sg = oaw.create_sec_group(self.nova_client, sg_name_ext,
+                                      'Security group for %s external access' % self.name)
+            self.__prov_log('create', 'sec-group', sg.id, sg.name)
+
+        # then the cluster internal group
+        sg_name_int = self.name + '-int'
+
+        try:
+            oaw.check_secgroup_exists(self.nova_client, sg_name_int)
+        except RuntimeError:
+            print 'No security group for internal access exists, creating it'
+            sg = oaw.create_sec_group(self.nova_client, sg_name_int,
+                                      'Security group for %s internal access' % self.name)
+            self.__prov_log('create', 'sec-group', sg.id, sg.name)
+
+            # add inter-cluster access
+            oaw.create_local_access_rules(self.nova_client, sg_name_int, sg_name_int)
+            # add access from bastion
+            oaw.create_local_access_rules(self.nova_client, sg_name_int, 'bastion')
+
+    def __provision_frontend(self):
+        fe_name = self.name + '-fe'
 
         if self.frontend:
             print '    %s already provisioned' % fe_name
         else:
-            self.frontend = self.__provision_vm(fe_name, [sec_group], self.config['frontend'],
+            self.frontend = self.__provision_vm(fe_name, [self.name + '-ext', self.name + '-int'],
+                                                self.config['frontend'],
                                                 self.config['cluster']['network'])
 
         self.__provision_volumes(self.frontend, self.config['frontend']['volumes'])
@@ -133,7 +157,9 @@ class Cluster(object):
             if node:
                 print '    %s already provisioned' % node_name
             else:
-                node = self.__provision_vm(node_name, [], self.config['node'], self.config['cluster']['network'])
+                node = self.__provision_vm(node_name, [self.name + '-int'],
+                                           self.config['node'],
+                                           self.config['cluster']['network'])
                 self.nodes.append(node)
             self.__provision_volumes(node, self.config['node']['volumes'])
             print
@@ -197,6 +223,10 @@ class Cluster(object):
             print "    no existing resources found"
 
     def up(self, num_nodes):
+        print
+        print "Provisioning security groups"
+        self.__provision_sec_groups()
+
         print
         print "Provisioning cluster frontend"
         self.__provision_frontend()

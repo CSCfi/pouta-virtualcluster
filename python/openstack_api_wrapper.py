@@ -89,8 +89,26 @@ def check_network_exists(client, network):
     raise RuntimeError('Requested network "%s" does not exist' % network)
 
 
-def create_sec_group(client, sec_group, description):
-    client.security_groups.create(sec_group, description)
+def create_sec_group(client, name, description):
+    return client.security_groups.create(name, description)
+
+
+def create_local_access_rules(client, to_sec_group_name, from_sec_group_name):
+    sg_to = None
+    sg_from = None
+    sgs = client.security_groups.list()
+    for sg in sgs:
+        if sg.name == to_sec_group_name:
+            sg_to = sg
+        if sg.name == from_sec_group_name:
+            sg_from = sg
+
+    client.security_group_rules.create(parent_group_id=sg_to.id, group_id=sg_from.id,
+                                       ip_protocol='tcp', from_port=1, to_port=65535)
+    client.security_group_rules.create(parent_group_id=sg_to.id, group_id=sg_from.id,
+                                       ip_protocol='udp', from_port=1, to_port=65535)
+    client.security_group_rules.create(parent_group_id=sg_to.id, group_id=sg_from.id,
+                                       ip_protocol='icmp', from_port=-1, to_port=-1)
 
 
 def create_vm(client, name, image_id, flavor_id, key_name, sec_groups, network_id=None):
