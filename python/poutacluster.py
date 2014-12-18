@@ -140,7 +140,9 @@ class Cluster(object):
 
     def __filter_volumes_for_node(self, volumes, vm_name):
         return [x for x in volumes
-                if x.display_name.startswith('%s/' % vm_name) and x.status in ['in-use', 'available']]
+                if x.display_name
+                and x.display_name.startswith('%s/' % vm_name)
+                and x.status in ['in-use', 'available']]
 
     def get_volumes_for_node(self, vm_name):
         return self.__filter_volumes_for_node(self.volumes, vm_name)
@@ -393,6 +395,7 @@ def print_usage_instructions(cluster):
     print "%020s : %s " % ('Spark', 'http://%s:8080/' % frontend_public_ip)
     print
     print "See README.rst for examples on testing the installation"
+
 
 def main():
     import argparse
