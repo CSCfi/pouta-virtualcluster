@@ -5,7 +5,7 @@ cluster:
   network: default
 frontend:
   sec-key: cluster-key
-  image: CentOS 6.6
+  image: CentOS-6.6
   admin-user: cloud-user
   flavor: mini
   public-ip: 86.50.168.XXX
@@ -23,7 +23,7 @@ frontend:
     - ge_master
 node:
   sec-key: cluster-key
-  image: CentOS 6.6
+  image: CentOS-6.6
   admin-user: cloud-user
   flavor: small
   volumes:
