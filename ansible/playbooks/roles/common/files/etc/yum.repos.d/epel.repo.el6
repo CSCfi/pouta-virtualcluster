@@ -5,7 +5,8 @@
 
 [epel]
 name=Extra Packages for Enterprise Linux 6 – x86_64
-baseurl=http://www.nic.funet.fi/pub/mirrors/fedora.redhat.com/pub/epel/6/x86_64/
+#baseurl=http://www.nic.funet.fi/pub/mirrors/fedora.redhat.com/pub/epel/6/x86_64/
+baseurl=http://download.fedoraproject.org/pub/epel/6/$basearch
 enabled=1
 gpgcheck=0
 
