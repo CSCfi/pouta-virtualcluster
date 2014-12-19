@@ -100,7 +100,7 @@ class Cluster(object):
 
     def __provision_sec_groups(self):
 
-        # first external access group
+        # first external access group for frontend
         sg_name_ext = self.name + '-ext'
 
         try:
@@ -131,8 +131,10 @@ class Cluster(object):
 
             # add inter-cluster access
             oaw.create_local_access_rules(self.nova_client, sg_name_int, sg_name_int)
-            # add access from bastion
-            oaw.create_local_access_rules(self.nova_client, sg_name_int, 'bastion')
+
+            # add access from other security groups (usually 'bastion')
+            for sg in self.config['cluster']['allow-traffic-from-sec-groups']:
+                oaw.create_local_access_rules(self.nova_client, sg_name_int, sg)
 
     def __provision_frontend(self):
         fe_name = self.name + '-fe'
