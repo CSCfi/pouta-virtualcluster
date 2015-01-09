@@ -111,13 +111,39 @@ def create_local_access_rules(client, to_sec_group_name, from_sec_group_name):
                                        ip_protocol='icmp', from_port=-1, to_port=-1)
 
 
-def create_vm(client, name, image_id, flavor_id, key_name, sec_groups, network_id=None):
+def check_server_group_exists(client, name, policies):
+    sgs = client.server_groups.list()
+
+    for sg in sgs:
+        if sg.name == name and len(sg.policies) == len(policies):
+            for pol in sg.policies:
+                if not pol in policies:
+                    continue
+            for pol in policies:
+                if not pol in sg.policies:
+                    continue
+
+            return sg.id
+
+    raise RuntimeError('Requested server group "%s" with given policies (%s) does not exist' % (name, policies))
+
+
+def create_server_group(client, name, policies):
+    sg = client.server_groups.create(name=name, policies=policies)
+    return sg.id
+
+
+def create_vm(client, name, image_id, flavor_id, key_name, sec_groups, network_id=None, server_group_id=None):
+    nics = None
     if network_id:
         nics = [{'net-id': network_id}]
-        instance = client.servers.create(name, image_id, flavor_id, key_name=key_name, security_groups=sec_groups,
-                                         nics=nics)
-    else:
-        instance = client.servers.create(name, image_id, flavor_id, key_name=key_name, security_groups=sec_groups)
+
+    scheduler_hints = {}
+    if server_group_id:
+        scheduler_hints['group'] = server_group_id
+
+    instance = client.servers.create(name, image_id, flavor_id, key_name=key_name, security_groups=sec_groups,
+                                     nics=nics, scheduler_hints=scheduler_hints)
 
     return instance.id
 

@@ -41,9 +41,12 @@ class Cluster(object):
                  'action': action, 'resource_type': resource_type, 'resource_id': '%s' % resource_id, 'info': info}
         self.__provisioning_log.append(entry)
 
-    def __provision_vm(self, name, sec_groups, spec, network):
+    def __provision_vm(self, name, sec_groups, spec, network, server_group_name=None):
         image_id = oaw.check_image_exists(self.nova_client, spec['image'])
         flavor_id = oaw.check_flavor_exists(self.nova_client, spec['flavor'])
+        server_group_id = None
+        if server_group_name:
+            server_group_id = oaw.check_server_group_exists(self.nova_client, server_group_name, ['anti-affinity'])
 
         # network needs more logic. We accept the magic keyword 'default', which will then try to use the tenant's
         # default network labeled after the tenant name
@@ -54,7 +57,7 @@ class Cluster(object):
         print '    creating %s: %s  - %s' % (name, spec['image'], spec['flavor'])
         print "    using network '%s'" % network
         instance_id = oaw.create_vm(self.nova_client, name, image_id, flavor_id, spec['sec-key'], sec_groups,
-                                    network_id)
+                                    network_id, server_group_id)
         print '    instance %s created, waiting for provisioning' % instance_id
         self.__prov_log('create', 'vm', instance_id, name)
         oaw.wait_for_state(self.nova_client, 'servers', instance_id, 'ACTIVE')
@@ -134,6 +137,16 @@ class Cluster(object):
             # add access from bastion
             oaw.create_local_access_rules(self.nova_client, sg_name_int, 'bastion')
 
+    def __provision_server_group(self):
+
+        try:
+            oaw.check_server_group_exists(self.nova_client, self.name, ['anti-affinity'])
+        except RuntimeError:
+            print
+            print 'No server group for %s exists, creating one' % self.name
+            sg_id = oaw.create_server_group(self.nova_client, self.name, ['anti-affinity'])
+            self.__prov_log('create', 'server-group', sg_id, self.name)
+
     def __provision_frontend(self):
         fe_name = self.name + '-fe'
 
@@ -142,7 +155,8 @@ class Cluster(object):
         else:
             self.frontend = self.__provision_vm(fe_name, [self.name + '-ext', self.name + '-int'],
                                                 self.config['frontend'],
-                                                self.config['cluster']['network'])
+                                                self.config['cluster']['network'],
+                                                server_group_name=self.name)
 
         self.__provision_volumes(self.frontend, self.config['frontend']['volumes'])
 
@@ -159,7 +173,8 @@ class Cluster(object):
             else:
                 node = self.__provision_vm(node_name, [self.name + '-int'],
                                            self.config['node'],
-                                           self.config['cluster']['network'])
+                                           self.config['cluster']['network'],
+                                           server_group_name=self.name)
                 self.nodes.append(node)
             self.__provision_volumes(node, self.config['node']['volumes'])
             print
@@ -226,6 +241,10 @@ class Cluster(object):
         print
         print "Provisioning security groups"
         self.__provision_sec_groups()
+
+        print
+        print "Provisioning server group"
+        self.__provision_server_group()
 
         print
         print "Provisioning cluster frontend"
