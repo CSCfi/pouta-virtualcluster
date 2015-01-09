@@ -1,5 +1,5 @@
 - name: Ensure spark local directory exists
-  action: file path="{{ item }}" state=directory owner=root
+  file: path="{{ item }}" state=directory owner=root mode=1777
   with_items:
     - "{{ spark_localdir }}"
   

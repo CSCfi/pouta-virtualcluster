@@ -15,5 +15,5 @@
     - include: spark/tasks/conf.yml
 
     - name: Start Spark master and slaves on master
-      action: command /opt/spark/sbin/start-all.sh
+      command: /opt/spark/sbin/start-all.sh
       when: inventory_hostname in groups.spark_master

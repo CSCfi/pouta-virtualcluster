@@ -409,7 +409,7 @@ def check_connectivity():
 
 
 def run_main_playbook():
-    cmd = "ansible-playbook ../ansible/playbooks/site.yml -i ansible-hosts"
+    cmd = "ansible-playbook ../ansible/playbooks/site.yml -i ansible-hosts -f 10"
     print cmd
     while subprocess.call(shlex.split(cmd)) != 0:
         print "    problem detected in running configuration, waiting a bit and retrying."
@@ -417,7 +417,7 @@ def run_main_playbook():
 
 
 def run_update_and_reboot():
-    cmd = "ansible-playbook ../ansible/playbooks/update_and_reboot.yml -i ansible-hosts"
+    cmd = "ansible-playbook ../ansible/playbooks/update_and_reboot.yml -i ansible-hosts -f 10"
     print cmd
     subprocess.call(shlex.split(cmd))
 

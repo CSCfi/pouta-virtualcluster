@@ -329,9 +329,9 @@ Make sure Spark is running::
 
     sudo /opt/spark/sbin/start-all.sh
 
-Start a Spark shell with 8GB worker nodes in the cluster (sudo needed for now, needs fixing) ::
+Start a Spark shell with 8GB worker nodes in the cluster::
 
-    sudo /opt/spark/bin/spark-shell --master spark://mycluster-fe:7077 --executor-memory 8G
+    /opt/spark/bin/spark-shell --master spark://mycluster-fe:7077 --executor-memory 8G
 
 Note that logs will be printed to the shell and it might look like the prompt is not ready. Hit *Enter* a few times to
 get the *scala>* -prompt.
