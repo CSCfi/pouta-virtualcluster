@@ -58,10 +58,15 @@ class Cluster(object):
         print "    using network '%s'" % network
         instance_id = oaw.create_vm(self.nova_client, name, image_id, flavor_id, spec['sec-key'], sec_groups,
                                     network_id, server_group_id)
-        print '    instance %s created, waiting for provisioning' % instance_id
+
+        print '    instance %s created' % instance_id
         self.__prov_log('create', 'vm', instance_id, name)
-        oaw.wait_for_state(self.nova_client, 'servers', instance_id, 'ACTIVE')
+
         instance = oaw.get_instance(self.nova_client, instance_id)
+
+        return instance
+
+    def __provision_vm_addresses(self, instance, spec):
 
         print '    instance internal IP: %s' % oaw.get_addresses(instance)[0]
         if 'public-ip' in spec.keys():
@@ -69,7 +74,6 @@ class Cluster(object):
             print "    associating public IP %s" % ip
             instance.add_floating_ip(ip)
 
-        return instance
 
     def __provision_volumes(self, instance, volspec):
         vd = chr(ord('c'))
@@ -158,10 +162,16 @@ class Cluster(object):
                                                 self.config['cluster']['network'],
                                                 server_group_name=self.name)
 
+        oaw.wait_for_state(self.nova_client, 'servers', self.frontend.id, 'ACTIVE')
+        # reload information after instance has reached active state
+        self.frontend = oaw.get_instance(self.nova_client, self.frontend.id)
+        self.__provision_vm_addresses(self.frontend, self.config['frontend'])
         self.__provision_volumes(self.frontend, self.config['frontend']['volumes'])
 
     def __provision_nodes(self, num_nodes):
         node_base = self.name + '-node'
+
+        # asynchronous part
         for i in range(1, num_nodes + 1):
             node_name = '%s%02d' % (node_base, i)
             node = None
@@ -176,6 +186,20 @@ class Cluster(object):
                                            self.config['cluster']['network'],
                                            server_group_name=self.name)
                 self.nodes.append(node)
+                oaw.wait_for_state(self.nova_client, 'servers', node.id, 'BUILD')
+
+            print
+
+        # synchronous part after nodes are active
+        # indexed access because we'll replace the node instances with updated versions
+        for i in range(0, len(self.nodes)):
+            node = self.nodes[i]
+            print '    setup network and volumes for %s' % node.name
+            oaw.wait_for_state(self.nova_client, 'servers', node.id, 'ACTIVE')
+            # reload information after instance has reached active state
+            node = oaw.get_instance(self.nova_client, node.id)
+            self.nodes[i] = node
+            self.__provision_vm_addresses(node, self.config['node'])
             self.__provision_volumes(node, self.config['node']['volumes'])
             print
 
@@ -190,16 +214,14 @@ class Cluster(object):
 
     def load_provisioned_state(self):
         print "Loading cluster state from OpenStack"
-        novacli = self.nova_client
-        cindercli = self.cinder_client
 
         # reset the state
         self.frontend = None
         self.nodes = []
         self.volumes = []
 
-        vms = novacli.servers.list()
-        all_vols = cindercli.volumes.list()
+        vms = self.nova_client.servers.list()
+        all_vols = self.cinder_client.volumes.list()
 
         fe_name = '%s-fe' % self.name
         existing_nodes = filter(lambda lx: lx.name == fe_name, vms)
