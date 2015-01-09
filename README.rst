@@ -190,8 +190,7 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
     cp ~/pouta-virtualcluster/cluster.yml.template cluster.yml
     vi cluster.yml
 
-* you can also edit the definition on your workstation and then copy it over to the bastion. The template can
-be found at https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
+* you can also edit the definition on your workstation and then copy it over to the bastion. The template can be found at https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
 
 * check, edit or fill in:
 
