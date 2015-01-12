@@ -176,7 +176,7 @@ def get_volume(client, volume_id):
 
 
 def create_and_attach_volume(nova_client, cinder_client, prov_state, instance,
-                             name, size, dev):
+                             name, size, dev, async=False):
     volume = cinder_client.volumes.create(size, display_name=name)
     prov_state['volume.%s.id' % name] = volume.id
     print '    created volume %s' % volume.id
@@ -184,16 +184,18 @@ def create_and_attach_volume(nova_client, cinder_client, prov_state, instance,
     wait_for_state(cinder_client, 'volumes', volume.id, 'available')
     print '    attaching volume %s to %s' % (volume.id, instance.id)
     nova_client.volumes.create_server_volume(instance.id, volume.id, dev)
-    wait_for_state(cinder_client, 'volumes', volume.id, 'in-use')
+    if not async:
+        wait_for_state(cinder_client, 'volumes', volume.id, 'in-use')
 
     return volume
 
 
-def attach_volume(nova_client, cinder_client, instance, volume, dev):
+def attach_volume(nova_client, cinder_client, instance, volume, dev, async=False):
     wait_for_state(cinder_client, 'volumes', volume.id, 'available')
     print '    attaching volume %s to %s' % (volume.id, instance.id)
     nova_client.volumes.create_server_volume(instance.id, volume.id, dev)
-    wait_for_state(cinder_client, 'volumes', volume.id, 'in-use')
+    if not async:
+        wait_for_state(cinder_client, 'volumes', volume.id, 'in-use')
 
 
 def delete_volume_by_id(client, vol_id, wait_for_deletion=False):
