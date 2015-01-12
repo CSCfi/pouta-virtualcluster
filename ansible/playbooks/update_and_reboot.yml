@@ -19,9 +19,6 @@
     action: selinux state=disabled
     when: ansible_distribution == 'CentOS'
 
-  - name: Change the default IO scheduler to deadline
-    command: sed -i -e 's/quiet$/quiet elevator=deadline/g' /etc/grub.conf
-    tags: grub
-
   - name: reboot
     action: shell reboot
+

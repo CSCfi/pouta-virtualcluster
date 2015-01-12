@@ -95,12 +95,12 @@ class Cluster(object):
                 else:
                     print "    attaching existing volume %s with size %s as device %s" % (
                         ex_vol.display_name, ex_vol.size, device)
-                    oaw.attach_volume(self.nova_client, self.cinder_client, instance, ex_vol, device)
+                    oaw.attach_volume(self.nova_client, self.cinder_client, instance, ex_vol, device, async=True)
 
             else:
                 print "    creating and attaching volume %s with size %s as device %s" % (vol_name, vol_size, device)
                 vol = oaw.create_and_attach_volume(self.nova_client, self.cinder_client, {}, instance,
-                                                   vol_name, vol_size, dev=device)
+                                                   vol_name, vol_size, dev=device, async=True)
                 self.__prov_log('create', 'volume', vol.id, vol_name)
 
             vd = chr(ord(vd) + 1)
@@ -275,6 +275,13 @@ class Cluster(object):
         print
         print "Provisioning %d cluster nodes" % num_nodes
         self.__provision_nodes(num_nodes)
+
+        print
+        print "Checking volume attach state"
+        for vol in self.volumes:
+            print "    %s" % vol.display_name
+            oaw.wait_for_state(self.cinder_client, 'volumes', vol.id, 'in-use')
+            print
 
     def down(self):
         # take nodes down in reverse order
