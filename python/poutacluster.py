@@ -102,6 +102,7 @@ class Cluster(object):
                 vol = oaw.create_and_attach_volume(self.nova_client, self.cinder_client, {}, instance,
                                                    vol_name, vol_size, dev=device, async=True)
                 self.__prov_log('create', 'volume', vol.id, vol_name)
+                self.volumes.append(vol)
 
             vd = chr(ord(vd) + 1)
 
