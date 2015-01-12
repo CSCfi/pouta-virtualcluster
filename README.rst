@@ -331,24 +331,26 @@ Make sure Spark is running::
 
 Start a Spark shell with 8GB worker nodes in the cluster::
 
-    /opt/spark/bin/spark-shell --master spark://mycluster-fe:7077 --executor-memory 8G
+    /opt/spark/bin/spark-shell --master spark://$HOSTNAME:7077 --executor-memory 8G
 
 Note that logs will be printed to the shell and it might look like the prompt is not ready. Hit *Enter* a few times to
 get the *scala>* -prompt.
 
 First we can test reading the input from NFS and writing the results to HDFS::
 
+    val hostname = System.getenv("HOSTNAME")
     val bigfile = sc.textFile("file:///shared_data/tmp/big.txt.x10000")
     val counts = bigfile.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
-    counts.saveAsTextFile("hdfs://mycluster-fe:9000/sparktest/output-1")
+    counts.saveAsTextFile("hdfs://"+hostname+":9000/sparktest/output-1")
 
 Note: Spark is lazy in evaluating the expressions, so no processing will be done before the last line.
 
 Then test HDFS to HDFS::
 
-    val bigfile = sc.textFile("hdfs://mycluster-fe:9000/sparktest/big.txt.x10000")
+    val hostname = System.getenv("HOSTNAME")
+    val bigfile = sc.textFile("hdfs://"+hostname+":9000/sparktest/big.txt.x10000")
     val counts = bigfile.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
-    counts.saveAsTextFile("hdfs://mycluster-fe:9000/sparktest/output-2")
+    counts.saveAsTextFile("hdfs://"+hostname+":9000/sparktest/output-2")
 
 Probably these hadoop dfs -commands will be handy, too::
 
