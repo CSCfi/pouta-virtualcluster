@@ -3,6 +3,8 @@ cluster:
   name: my-cluster
   description: Testing poutacluster provisioning
   network: default
+  allow-traffic-from-sec-groups:
+    - bastion
 frontend:
   sec-key: cluster-key
   image: CentOS-6.6
