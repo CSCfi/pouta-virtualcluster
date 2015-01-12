@@ -22,7 +22,7 @@ Currently poutacluster can provision:
 * Ganglia for monitoring
 * GridEngine for batch processing
 * Apache Hadoop 1.2.1
-* Apache Spark 1.0.2
+* Apache Spark 1.1.1
 
 How it works
 ============
@@ -190,7 +190,8 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
     cp ~/pouta-virtualcluster/cluster.yml.template cluster.yml
     vi cluster.yml
 
-* you can also edit the definition on your workstation and then copy it over to the bastion. The template can be found at https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
+* you can also edit the definition on your workstation and then copy it over to the bastion. The template can
+be found at https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
 
 * check, edit or fill in:
 
@@ -255,7 +256,7 @@ Add a user and test NFS::
 GridEngine
 ----------
 
-As a normal user (or centos), test job submission::
+As a normal user (or cloud-user), test job submission::
 
     cd
     for i in {001..016}; do qsub -b y -N uname-$i uname -a; done
