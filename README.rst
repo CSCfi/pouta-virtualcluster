@@ -310,21 +310,23 @@ Some useful admin commands::
 
 Spark
 -----
-Word count example with a random 6MB file found in the internet containing text. The file is concatenated 10000 times,
-resulting 61GB of text data. Make sure you have big enough *shared_data* and *local_data* -volumes provisioned. Another
-good source of big text is Wikipedia database dumps (http://en.wikipedia.org/wiki/Wikipedia:Database_download).
+Word count example with English language DBpedia dump. The file is replicated 20 times,
+resulting 50GB of text data. Make sure you have big enough *shared_data* and *local_data* -volumes provisioned.
 
-First download some ascii text and concatenate it to NFS shared directory::
+First download the input data and replicate it to get more data::
 
     sudo mkdir /shared_data/tmp
     sudo chmod 1777 /shared_data/tmp
     cd /shared_data/tmp
-    wget http://norvig.com/big.txt
-    for i in {1..10000}; do cat big.txt >> big.txt.x10000; done
+    mkdir dbpedia
+    cd dbpedia
+    curl -sS http://data.dws.informatik.uni-mannheim.de/dbpedia/2014/en/long_abstracts_en.ttl.bz2 \
+    | bunzip2 -c > dbpedia_long_abstracts_en.ttl.01
+    for i in {02..20}; do cp -v dbpedia_long_abstracts_en.ttl.01 dbpedia_long_abstracts_en.ttl.$i; done
 
-Then upload it to HDFS also (this will take some time)::
+Then upload it to HDFS::
 
-    hadoop dfs -put big.txt.x10000 /sparktest/big.txt.x10000
+    hadoop distcp file:///shared_data/tmp/dbpedia hdfs://$HOSTNAME:9000/sparktest/dbpedia
 
 Make sure Spark is running::
 
@@ -340,18 +342,27 @@ get the *scala>* -prompt.
 First we can test reading the input from NFS and writing the results to HDFS::
 
     val hostname = System.getenv("HOSTNAME")
-    val bigfile = sc.textFile("file:///shared_data/tmp/big.txt.x10000")
-    val counts = bigfile.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
+    val dbpediaText = sc.textFile("file:///shared_data/tmp/dbpedia")
+    val counts = dbpediaText.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
     counts.saveAsTextFile("hdfs://"+hostname+":9000/sparktest/output-1")
 
 Note: Spark is lazy in evaluating the expressions, so no processing will be done before the last line.
 
-Then test HDFS to HDFS::
+Then test HDFS to HDFS (should be faster)::
 
     val hostname = System.getenv("HOSTNAME")
-    val bigfile = sc.textFile("hdfs://"+hostname+":9000/sparktest/big.txt.x10000")
-    val counts = bigfile.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
+    val dbpediaText = sc.textFile("hdfs://"+hostname+":9000/sparktest/dbpedia")
+    val counts = dbpediaText.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
     counts.saveAsTextFile("hdfs://"+hostname+":9000/sparktest/output-2")
+
+Printing the Top 50 words longer than 3 characters in the dbpedia dump::
+
+    val hostname = System.getenv("HOSTNAME")
+    val dbpediaText = sc.textFile("hdfs://"+hostname+":9000/sparktest/dbpedia")
+    val filtered = dbpediaText.flatMap(line => line.toLowerCase().split(" ")).filter(word => word.matches("[a-z]*")).filter(word => word.length()>3)
+    val counts=filtered.map(word => (word, 1)).reduceByKey(_ + _)
+    val top=counts.map(x => (x._2, x._1)).sortByKey(false).take(50)
+    for (i <- top){ println (i._2+"\t"+i._1) }
 
 Probably these hadoop dfs -commands will be handy, too::
 
