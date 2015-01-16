@@ -11,7 +11,7 @@ support volumes (persistent storage) and runs directly against OpenStack Python 
 
 Currently poutacluster can provision:
 
-* Basic cluster infra on top of CentOS 6.5 with one frontend and N compute nodes
+* Basic cluster infra on top of CentOS 6.6 with one frontend and N compute nodes
 
   - frontend and compute nodes can have different images, flavors and keys
   - frontend has a public IP
@@ -191,7 +191,7 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
     vi cluster.yml
 
 * you can also edit the definition on your workstation and then copy it over to the bastion. The template can
-be found at https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
+  be found at https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
 
 * check, edit or fill in:
 
