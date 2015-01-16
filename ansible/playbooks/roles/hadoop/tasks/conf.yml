@@ -11,17 +11,18 @@
   action: file path="{{ item }}" state=directory owner=mapred
   with_items:
     - "{{ mapred_localdir }}"
-  
+  when: groups.hadoop_jobtracker is defined
+
 - name: configure masters file
   action: template src=hadoop/templates/masters.j2 dest={{ hd_confdir }}/masters owner=root mode=0644
 
 - name: configure slaves file
   action: template src=hadoop/templates/slaves.j2 dest={{ hd_confdir }}/slaves owner=root mode=0644
-  when: inventory_hostname in groups.hadoop_jobtracker or inventory_hostname in groups.hadoop_namenode
+  when: inventory_hostname in groups.hadoop_namenode
 
 - name: configure hosts.exclude
   file: name={{ hd_confdir }}/hosts.exclude state=touch owner=root mode=0644
-  when: inventory_hostname in groups.hadoop_jobtracker or inventory_hostname in groups.hadoop_namenode
+  when: inventory_hostname in groups.hadoop_namenode
 
 - name: configure core-site.xml file
   action: template src=hadoop/templates/core-site.xml.j2 dest={{ hd_confdir }}/core-site.xml owner=root mode=0644
@@ -31,6 +32,7 @@
 
 - name: configure mapred-site.xml file
   action: template src=hadoop/templates/mapred-site.xml.j2 dest="{{ hd_confdir }}/mapred-site.xml" owner=root mode=0644
+  when: groups.hadoop_jobtracker is defined
 
 - name: set JAVA_HOME environment variable
   action: lineinfile dest="{{ hd_confdir }}/hadoop-env.sh" regexp='export JAVA_HOME.*' line='export JAVA_HOME=/usr/lib/jvm/default-java'

@@ -54,8 +54,8 @@
 
     - name: Start job tracker (=mapred master)
       action: service name=hadoop-jobtracker state=started enabled=yes
-      when: inventory_hostname in groups.hadoop_jobtracker
+      when: groups.hadoop_jobtracker is defined and inventory_hostname in groups.hadoop_jobtracker
 
     - name: Start task trackers (=mapred slaves)
       action: service name=hadoop-tasktracker state=started enabled=yes
-      when: inventory_hostname in groups.hadoop_tasktracker
+      when: groups.hadoop_jobtracker is defined and inventory_hostname in groups.hadoop_tasktracker
