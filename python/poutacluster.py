@@ -280,10 +280,13 @@ class Cluster(object):
 
         print
         print "Checking volume attach state"
-        for vol in self.volumes:
-            print "    %s" % vol.display_name
-            oaw.wait_for_state(self.cinder_client, 'volumes', vol.id, 'in-use')
-            print
+        for node in self.nodes:
+            for vol in self.volumes:
+                if not vol.display_name.startswith(node.name+'/'):
+                    continue
+                print "    %s" % vol.display_name
+                oaw.wait_for_state(self.cinder_client, 'volumes', vol.id, 'in-use')
+                print
 
     def down(self):
         # take nodes down in reverse order
