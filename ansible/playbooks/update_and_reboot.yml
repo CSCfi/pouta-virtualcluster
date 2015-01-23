@@ -1,5 +1,5 @@
 ---
-- name: Update, bootstrap and reboot
+- name: Update, bootstrap and reboot if necessary
   hosts: all
   sudo: yes
   tasks:
@@ -11,14 +11,18 @@
 
   - name: clean yum state
     action: shell yum clean all
+    when: is_centos
 
   - name: update packages
     yum: name=* state=latest
+    when: is_centos
 
   - name: disable SELinux on CentOS
     action: selinux state=disabled
     when: ansible_distribution == 'CentOS'
+    when: is_centos
 
   - name: reboot
     action: shell reboot
+    when: is_centos
 

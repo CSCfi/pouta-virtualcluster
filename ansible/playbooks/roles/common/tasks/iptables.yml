@@ -15,11 +15,25 @@
 #                 internet* are accepted (but not from the internal
 #
 
+- name: Install iptables packages (Ubuntu)
+  action: apt pkg={{item}} update_cache=yes
+  when: is_debian_or_ubuntu
+  with_items:
+    - iptables
+    - iptables-persistent
+  tags: iptables
+
 - name: Install iptables package (CentOS)
   action: yum pkg=iptables
+  when: is_centos
+  tags: iptables
+
+- action: set_fact destfile=/etc/iptables/rules.v4
+  when: is_debian_or_ubuntu and is_docker_container is not defined
   tags: iptables
 
 - action: set_fact destfile=/etc/sysconfig/iptables
+  when: is_centos
   tags: iptables
 
 - action: set_fact default_policy=ACCEPT
@@ -30,7 +44,9 @@
   when: default_policy is not defined
   tags: iptables
 
-- action: template dest="{{ destfile }}" src=common/templates/etc/iptables.d/rules.v4.j2 owner=root group=root mode=0644
-  notify: restart iptables
+- action: template dest={{ destfile }} src=common/templates/etc/iptables.d/rules.v4.j2 owner=root group=root mode=0644
+  when: is_docker_container is not defined
+  notify:
+    - restart iptables
+    - restart iptables-persistent
   tags: iptables
-  

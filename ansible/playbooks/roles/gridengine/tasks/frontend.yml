@@ -79,6 +79,7 @@
 - name: Export gridengine cell to the clients
   action: nfsexport path=/usr/share/gridengine/default/common dest=/etc/exports clients="{{ groups.ge_slave }}" options=ro,no_root_squash,sync
   notify: 
+    - ensure nfs-kernel-server service is running
     - ensure nfs service is running
     - reload exports
   tags:

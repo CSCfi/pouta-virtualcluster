@@ -3,22 +3,35 @@
   name: Cluster master preparation
   sudo: yes
   tasks:
+
     - include: common/tasks/nfs.yml
-    - action: filesystem fstype=ext4 dev=/dev/vdd opts="-L shared"
-    - action: mount name=/shared_data src='LABEL=shared' state=mounted opts=defaults fstype=ext4
-    - action: nfsexport path=/shared_data dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,async
-    - action: nfsexport path=/home dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,sync
-    - action: shell service nfs start
-    - action: shell exportfs -a
-    - action: yum name=pdsh state=present
+
+    - filesystem: fstype=ext4 dev=/dev/vdd opts="-L shared"
+    - mount: name=/shared_data src='LABEL=shared' state=mounted opts=defaults fstype=ext4
+
+    - nfsexport: path=/shared_data dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,async
+      notify: restart nfsd
+
+    - nfsexport: path=/home dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,sync
+      notify: restart nfsd
+
+    - name: install pdsh
+      yum: name=pdsh state=present
+      when: is_centos
+
+    - name: install pdsh
+      apt: name=pdsh state=present
+      when: is_debian_or_ubuntu
+
+    - name: set pdsh default transport to ssh
+      lineinfile: name=/etc/pdsh/rcmd_default create=yes line='ssh' state=present
+
   handlers:
     - include: common/handlers/main.yml
 
 - hosts: cluster_master:cluster_slave
   name: Common cluster preparation
   sudo: yes
-  vars_files:
-    - vars/os
   tasks:
     - include: common/tasks/iptables.yml trusted_hosts="{{ groups.all }}" default_accept=1
     - action: filesystem fstype=ext4 dev=/dev/vdc opts="-L data"

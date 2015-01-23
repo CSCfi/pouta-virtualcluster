@@ -1,12 +1,19 @@
 ---
 - name: update the system
   yum: name=* state=latest
+  when: is_centos
 
-#- name: install the 'Development tools' package group
-#  yum: name="@Development tools" state=present
+- name: update the system
+  apt: upgrade=full
+  when: is_debian_or_ubuntu
 
 - name: install acpid for soft reboots
   yum: name=acpid state=present
+  when: is_centos
+
+- name: install acpid for soft reboots
+  apt: name=acpi state=present
+  when: is_debian_or_ubuntu
 
 - name: configure and start acpid service
   service: name=acpid state=started enabled=true
@@ -20,4 +27,15 @@
   - tmux
   - bash-completion
   - dstat
+  when: is_centos
 
+- name: install misc auxiliary packages
+  apt: name="{{ item }}" state=present
+  with_items:
+  - btrfs-tools
+  - tree
+  - wget
+  - tmux
+  - bash-completion
+  - dstat
+  when: is_debian_or_ubuntu
