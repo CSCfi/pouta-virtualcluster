@@ -10,10 +10,14 @@
     - mount: name=/shared_data src='LABEL=shared' state=mounted opts=defaults fstype=ext4
 
     - nfsexport: path=/shared_data dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,async
-      notify: restart nfsd
+      notify:
+        - restart nfsd
+        - restart nfs-kernel-server
 
     - nfsexport: path=/home dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,sync
-      notify: restart nfsd
+      notify:
+        - restart nfsd
+        - restart nfs-kernel-server
 
     - name: install pdsh
       yum: name=pdsh state=present
