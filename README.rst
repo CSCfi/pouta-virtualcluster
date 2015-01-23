@@ -321,8 +321,7 @@ First download the input data and replicate it to get more data::
     mkdir dbpedia
     cd dbpedia
     curl -sS http://data.dws.informatik.uni-mannheim.de/dbpedia/2014/en/long_abstracts_en.ttl.bz2 \
-    | bunzip2 -c > dbpedia_long_abstracts_en.ttl.01
-    for i in {02..20}; do cp -v dbpedia_long_abstracts_en.ttl.01 dbpedia_long_abstracts_en.ttl.$i; done
+    | bunzip2 -c | tee dbpedia_long_abstracts_en.ttl.{01..20} > /dev/null
 
 Then upload it to HDFS::
 
