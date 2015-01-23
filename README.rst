@@ -340,7 +340,8 @@ get the *scala>* -prompt.
 
 First we can test reading the input from NFS and writing the results to HDFS::
 
-    val hostname = System.getenv("HOSTNAME")
+    import java.net._
+    val hostname = InetAddress.getLocalHost.getHostName
     val dbpediaText = sc.textFile("file:///shared_data/tmp/dbpedia")
     val counts = dbpediaText.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
     counts.saveAsTextFile("hdfs://"+hostname+":9000/sparktest/output-1")
@@ -349,14 +350,16 @@ Note: Spark is lazy in evaluating the expressions, so no processing will be done
 
 Then test HDFS to HDFS (should be faster)::
 
-    val hostname = System.getenv("HOSTNAME")
+    import java.net._
+    val hostname = InetAddress.getLocalHost.getHostName
     val dbpediaText = sc.textFile("hdfs://"+hostname+":9000/sparktest/dbpedia")
     val counts = dbpediaText.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
     counts.saveAsTextFile("hdfs://"+hostname+":9000/sparktest/output-2")
 
 Printing the Top 50 words longer than 3 characters in the dbpedia dump::
 
-    val hostname = System.getenv("HOSTNAME")
+    import java.net._
+    val hostname = InetAddress.getLocalHost.getHostName
     val dbpediaText = sc.textFile("hdfs://"+hostname+":9000/sparktest/dbpedia")
     val filtered = dbpediaText.flatMap(line => line.toLowerCase().split(" ")).filter(word => word.matches("[a-z]*")).filter(word => word.length()>3)
     val counts=filtered.map(word => (word, 1)).reduceByKey(_ + _)
