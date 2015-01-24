@@ -7,6 +7,7 @@
     - include: common/tasks/iptables.yml trusted_hosts="{{ groups.all }}"
   handlers:
     - include: common/handlers/main.yml
+    - include: gridengine/handlers/main.yml
 
 - name: GridEngine masternode play
   hosts: ge_master
@@ -17,13 +18,16 @@
     - include: common/tasks/nfs.yml
   handlers:
     - include: common/handlers/main.yml
+    - include: gridengine/handlers/main.yml
 
 - name: GridEngine worker nodes play
   hosts: ge_slave
   sudo: yes
   tasks: 
     - include: common/tasks/nfs-clients.yml nfsserver="{{ groups.ge_master[0] }}" nfspath=/usr/share/gridengine/default/common nfsmount=/usr/share/gridengine/default/common
+      when: is_centos
     - include: gridengine/tasks/nodes.yml
   handlers:
     - include: common/handlers/main.yml
+    - include: gridengine/handlers/main.yml
 
