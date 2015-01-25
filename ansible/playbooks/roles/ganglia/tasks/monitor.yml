@@ -25,7 +25,6 @@
     - gmond
 
 - name: Ensure gmond is running.
-  action: service name=gmond state=started
-  when: is_centos
+  action: service name=gmond state=started enabled=true
   tags:
     - ganglia
