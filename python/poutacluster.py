@@ -580,4 +580,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    start_ts=time.time()
+
+    try:
+        main()
+    finally:
+        end_ts=time.time()
+        print "Run took %d seconds" % int(end_ts - start_ts)
