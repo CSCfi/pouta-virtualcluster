@@ -26,8 +26,8 @@
     -nfs
 
 # CentOS does not start needed services after installation
-- name: ensure nfs service is running (CentOS)
-  action: service name={{item}} state=started
+- name: ensure nfs service is running and enabled (CentOS)
+  action: service name={{item}} state=started enabled=true
   when: is_centos
   tags:
     - nfs
@@ -36,8 +36,8 @@
     - nfslock
     - nfs
 
-- name: ensure nfs service is running (Ubuntu)
-  action: service name={{item}} state=started
+- name: ensure nfs service is running and enabled (Ubuntu)
+  action: service name={{item}} state=started enabled=true
   when: is_debian_or_ubuntu
   tags:
     - nfs
