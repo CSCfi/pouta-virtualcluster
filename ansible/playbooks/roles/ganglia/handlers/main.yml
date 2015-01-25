@@ -9,7 +9,7 @@
 
 # gmetad and ganglia-monitor init scripts does not support `status`
 # argument.
-- name: restart gmond
+- name: restart ganglia-monitor
   action: command service ganglia-monitor restart
   when: is_debian_or_ubuntu
 

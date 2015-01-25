@@ -53,13 +53,13 @@
     - ganglia
 
 - name: Ensure httpd is running (CentOS)
-  action: service name=httpd state=started
+  action: service name=httpd state=started enabled=true
   when: is_centos
   tags:
     - ganglia
 
 - name: Ensure ganglia daemons are running (CentOS)
-  action: service name={{item}} state=started
+  action: service name={{item}} state=started enabled=true
   when: is_centos
   with_items:
     - gmond
