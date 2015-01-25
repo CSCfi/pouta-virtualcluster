@@ -46,7 +46,7 @@
   tags:
     - ganglia
 
-- name: Configure gemetad
+- name: Configure gmetad
   action: template src=ganglia/templates/gmetad.conf.j2 dest=/etc/ganglia/gmetad.conf
   notify: restart gmetad
   tags:
