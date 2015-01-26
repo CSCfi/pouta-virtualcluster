@@ -31,7 +31,7 @@
 		<value>4</value>
 	</property>
 
-    
+{% if ansible_distribution == "CentOS" %}
     <!-- snappy compression on -->
 	<property>
 		<name>mapred.compress.map.output</name>
@@ -40,5 +40,7 @@
 	<property>
 		<name>mapred.map.output.compression.codec</name>
 		<value>org.apache.hadoop.io.compress.SnappyCodec</value>
-	</property>     
+	</property>
+{% endif %}
+
 </configuration>
