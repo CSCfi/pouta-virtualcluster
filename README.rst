@@ -11,7 +11,7 @@ support volumes (persistent storage) and runs directly against OpenStack Python 
 
 Currently poutacluster can provision:
 
-* Basic cluster infra on top of CentOS 6.6 with one frontend and N compute nodes
+* Basic cluster infra on top of CentOS 6.6 or Ubuntu 14.04 with one frontend and N compute nodes
 
   - frontend and compute nodes can have different images, flavors and keys
   - frontend has a public IP
@@ -50,9 +50,11 @@ Provisioning VMs for cluster goes roughly like this:
       + my-cluster-node02
       + ...
 
-  - VMs are launched from the specified image with specified flavor
+  - VMs are launched from the specified image with specified flavor. They are placed in an OpenStack server group with
+    anti-affinity policy to distribute them on separate hosts for better fault tolerance.
   - volumes are created or reused and attached
   - template security groups are created if these don't exist already
+
 
 
 * Ansible host inventory file is created, mapping VMs to assigned roles
@@ -240,14 +242,14 @@ Check uptime on all the hosts on cluster frontend::
 
 Reboot the nodes::
 
-    pdsh -w mycluster-node[01-04] reboot
+    sudo pdsh -w mycluster-node[01-04] reboot
 
 Add a user and test NFS::
 
-    useradd -u 1010 bill
-    passwd bill
-    pdsh -w mycluster-node[01-04] useradd -u 1010 --no-create-home bill
-    su - bill
+    sudo useradd --create-home --shell=/bin/bash -u 1010 bill
+    sudo passwd bill
+    sudo pdsh -w mycluster-node[01-04] useradd --shell=/bin/bash -u 1010 --no-create-home bill
+    sudo su - bill
     ssh mycluster-node01 touch hello-from-node01
     ls
     exit
@@ -375,8 +377,6 @@ Probably these hadoop dfs -commands will be handy, too::
 Missing bits
 ============
 
-* support for Ubuntu
-
 * online resize
 
 * persistent home directory
@@ -385,6 +385,5 @@ Missing bits
 
 * Spark does not start automatically after a reboot. To start it run::
 
-    [root@fe /root]# /opt/spark/sbin/start-all.sh
-
+    # sudo /opt/spark/sbin/start-all.sh
 
