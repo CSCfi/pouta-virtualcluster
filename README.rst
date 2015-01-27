@@ -111,7 +111,7 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 * Boot a new VM from the latest CentOS 6 image that is provided by CSC
 
   - go to *Instances -> Launch Instance*
-  - Image: Latest public Centos image (CentOS 6.5 at the time of writing)
+  - Image: Latest public Centos image (CentOS 6.6 at the time of writing)
   - Flavor: tiny
   - Keypair: select your key
   - Security Groups: select only *bastion*
@@ -122,20 +122,20 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 
 * Log in to the bastion host with ssh as either *cloud-user* or *ubuntu* user, depending on the image::
 
-    ssh cloud-user@86.50.168.XXX:
+    ssh cloud-user@86.50.16X.XXX:
     
-* Run commands requiring superuser privileges with sudo or switch to root user with:: 
-    
-    sudo -i
-
 * update the system and reboot to bring the host up to date::
 
-    yum update -y && reboot
+    sudo yum update -y && sudo reboot
 
-* install EPEL repo, openssh-clients, bash-completion, git, Python yaml-support, Ansible and OpenStack clients::
+* add OpenStack repository for installing the client packages::
 
-    rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-    yum install -y bash-completion openssh-clients python-novaclient python-cinderclient git python-yaml ansible
+    sudo yum install -y yum-plugin-priorities
+    sudo yum install -y http://repos.fedorapeople.org/repos/openstack/openstack-icehouse/rdo-release-icehouse-3.noarch.rpm
+
+* install openssh-clients, bash-completion, git, Python yaml-support, Ansible and OpenStack clients::
+
+    sudo yum install -y bash-completion openssh-clients python-openstackclient git python-yaml ansible
 
 * import your OpenStack command line access configuration
 
@@ -164,7 +164,6 @@ Installation
 
 Next we install *poutacluster* on the bastion host::
 
-    yum install ansible -y
     cd
     git clone https://github.com/CSC-IT-Center-for-Science/pouta-virtualcluster
     mkdir ~/bin
