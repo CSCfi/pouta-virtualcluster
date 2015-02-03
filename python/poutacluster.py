@@ -66,7 +66,8 @@ class Cluster(object):
 
         return instance
 
-    def __provision_vm_addresses(self, instance, spec):
+    @staticmethod
+    def __provision_vm_addresses(instance, spec):
 
         print '    instance internal IP: %s' % oaw.get_addresses(instance)[0]
         if 'public-ip' in spec.keys():
@@ -204,7 +205,8 @@ class Cluster(object):
             self.__provision_volumes(node, self.config['node']['volumes'])
             print
 
-    def __filter_volumes_for_node(self, volumes, vm_name):
+    @staticmethod
+    def __filter_volumes_for_node(volumes, vm_name):
         return [x for x in volumes
                 if x.display_name
                 and x.display_name.startswith('%s/' % vm_name)
@@ -330,11 +332,30 @@ class Cluster(object):
             oaw.delete_volume_by_id(self.cinder_client, vol.id, True)
             self.__prov_log('delete', 'volume', vol.id, vol.display_name)
 
+    def cleanup(self):
+        print "Cleaning server and security groups"
+
+        if self.frontend or len(self.nodes) > 0:
+            print
+            print "ERROR: cluster seems to be up, refusing to clean up server and security groups"
+            print
+            return
+
+        print "    deleting server group %s" % self.name
+        sg_id = oaw.delete_server_group(self.nova_client, self.name)
+        self.__prov_log('delete', 'server-group', sg_id, self.name)
+
+        for postfix in ['ext', 'int']:
+            sg_name = '%s-%s' % (self.name, postfix)
+            print "    deleting security group %s" % sg_name
+            sg_id = oaw.delete_sec_group(self.nova_client, sg_name)
+            self.__prov_log('delete', 'sec_group', sg_id, sg_name)
+
     def reset_nodes(self):
         for node in self.nodes:
             print "Hard resetting %s" % node.name
             node.reboot(reboot_type='HARD')
-            # rate limit resets, otherwise API will give an error
+            # rate limit on resets, otherwise API will give an error
             time.sleep(3)
 
     def get_info(self):
@@ -489,7 +510,8 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['up', 'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure'])
+    parser.add_argument('command',
+                        choices=['up', 'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup'])
     parser.add_argument(
         'num_nodes', metavar='num nodes', nargs='?', type=int, help='number of nodes')
     args, commands = parser.parse_known_args()
@@ -561,6 +583,10 @@ def main():
     # destroy all provisioned volumes
     elif command == 'destroy_volumes':
         cluster.destroy_volumes()
+
+    # clean up server and security groups
+    elif command == 'cleanup':
+        cluster.cleanup()
 
     # print info about provisioned resources
     elif command == 'info':
