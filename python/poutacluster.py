@@ -74,7 +74,6 @@ class Cluster(object):
             print "    associating public IP %s" % ip
             instance.add_floating_ip(ip)
 
-
     def __provision_volumes(self, instance, volspec):
         vd = chr(ord('c'))
         for volconf in volspec:
@@ -282,7 +281,7 @@ class Cluster(object):
         print "Checking volume attach state"
         for node in self.nodes:
             for vol in self.volumes:
-                if not vol.display_name.startswith(node.name+'/'):
+                if not vol.display_name.startswith(node.name + '/'):
                     continue
                 print "    %s" % vol.display_name
                 oaw.wait_for_state(self.cinder_client, 'volumes', vol.id, 'in-use')
@@ -414,6 +413,8 @@ def update_ansible_inventory(cluster):
 
 def check_connectivity():
     cmd = "ansible -o --sudo -i ansible-hosts '*' -a 'uname -a'"
+    if os.path.isfile('key.priv'):
+        cmd += '--private-key key.priv'
     print cmd
     while subprocess.call(shlex.split(cmd)) != 0:
         print "    no full connectivity yet, waiting a bit and retrying"
@@ -422,6 +423,8 @@ def check_connectivity():
 
 def run_main_playbook():
     cmd = "ansible-playbook ../ansible/playbooks/site.yml -i ansible-hosts -f 10"
+    if os.path.isfile('key.priv'):
+        cmd += ' --private-key key.priv'
     print cmd
     while subprocess.call(shlex.split(cmd)) != 0:
         print "    problem detected in running configuration, waiting a bit and retrying."
@@ -430,6 +433,8 @@ def run_main_playbook():
 
 def run_update_and_reboot():
     cmd = "ansible-playbook ../ansible/playbooks/update_and_reboot.yml -i ansible-hosts -f 10"
+    if os.path.isfile('key.priv'):
+        cmd += ' --private-key key.priv'
     print cmd
     subprocess.call(shlex.split(cmd))
 
@@ -580,10 +585,10 @@ def main():
 
 
 if __name__ == '__main__':
-    start_ts=time.time()
+    start_ts = time.time()
 
     try:
         main()
     finally:
-        end_ts=time.time()
+        end_ts = time.time()
         print "Run took %d seconds" % int(end_ts - start_ts)
