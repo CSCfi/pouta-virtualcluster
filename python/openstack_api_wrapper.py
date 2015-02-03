@@ -110,6 +110,12 @@ def create_local_access_rules(client, to_sec_group_name, from_sec_group_name):
     client.security_group_rules.create(parent_group_id=sg_to.id, group_id=sg_from.id,
                                        ip_protocol='icmp', from_port=-1, to_port=-1)
 
+def delete_sec_group(client, name):
+    sgs = client.security_groups.list()
+    for sg in sgs:
+        if sg.name == name:
+            client.security_groups.delete(sg.id)
+            return sg.id
 
 def check_server_group_exists(client, name, policies):
     sgs = client.server_groups.list()
@@ -117,10 +123,10 @@ def check_server_group_exists(client, name, policies):
     for sg in sgs:
         if sg.name == name and len(sg.policies) == len(policies):
             for pol in sg.policies:
-                if not pol in policies:
+                if pol not in policies:
                     continue
             for pol in policies:
-                if not pol in sg.policies:
+                if pol not in sg.policies:
                     continue
 
             return sg.id
@@ -132,6 +138,16 @@ def create_server_group(client, name, policies):
     sg = client.server_groups.create(name=name, policies=policies)
     return sg.id
 
+
+def delete_server_group(client, name):
+    sgs = client.server_groups.list()
+
+    for sg in sgs:
+        if sg.name == name:
+            client.server_groups.delete(sg.id)
+            return sg.id
+
+    raise RuntimeError('Requested server group "%s" does not exist' % name)
 
 def create_vm(client, name, image_id, flavor_id, key_name, sec_groups, network_id=None, server_group_id=None):
     nics = None
@@ -230,6 +246,3 @@ def get_addresses(instance, ip_type='fixed'):
     networks = instance.addresses
     return [x['addr'] for x in itertools.chain.from_iterable(networks.values())
             if x['OS-EXT-IPS:type'] == ip_type]
-
-
-
