@@ -115,8 +115,8 @@ class Cluster(object):
             oaw.check_secgroup_exists(self.nova_client, sg_name_ext)
         except RuntimeError:
             print
-            print 'No security group for external access exists, creating an empty placeholder'
-            print 'NOTE: you will need to add the rules afterwards through '
+            print '    Creating security group for external access'
+            print '    NOTE: you can modify the rules afterwards through '
             print
             print '      nova secgroup-add-rule %s ...' % sg_name_ext
             print
@@ -126,18 +126,27 @@ class Cluster(object):
                                       'Security group for %s external access' % self.name)
             self.__prov_log('create', 'sec-group', sg.id, sg.name)
 
+            # add user configured rules
+            if self.config['cluster'].has_key('ext-secgroup-rules'):
+                for rule in self.config['cluster']['ext-secgroup-rules']:
+                    print "    adding rule '%s'" % rule
+                    proto, from_port, to_port, cidr = rule.strip().split()
+                    oaw.add_sec_group_rule(self.nova_client, sg.id, ip_protocol=proto, from_port=from_port,
+                                           to_port=to_port, cidr=cidr)
+
         # then the cluster internal group
         sg_name_int = self.name + '-int'
 
         try:
             oaw.check_secgroup_exists(self.nova_client, sg_name_int)
         except RuntimeError:
-            print 'No security group for internal access exists, creating it'
+            print
+            print '    No security group for internal access exists, creating it'
             sg = oaw.create_sec_group(self.nova_client, sg_name_int,
                                       'Security group for %s internal access' % self.name)
             self.__prov_log('create', 'sec-group', sg.id, sg.name)
 
-            # add inter-cluster access
+            # add intra-cluster access
             oaw.create_local_access_rules(self.nova_client, sg_name_int, sg_name_int)
             # add access from other security groups (usually 'bastion')
             for sg in self.config['cluster']['allow-traffic-from-sec-groups']:
@@ -344,14 +353,20 @@ class Cluster(object):
             return
 
         print "    deleting server group %s" % self.name
-        sg_id = oaw.delete_server_group(self.nova_client, self.name)
-        self.__prov_log('delete', 'server-group', sg_id, self.name)
+        try:
+            sg_id = oaw.delete_server_group(self.nova_client, self.name)
+            self.__prov_log('delete', 'server-group', sg_id, self.name)
+        except RuntimeError as e:
+            print "    %s" % e
 
         for postfix in ['ext', 'int']:
             sg_name = '%s-%s' % (self.name, postfix)
             print "    deleting security group %s" % sg_name
-            sg_id = oaw.delete_sec_group(self.nova_client, sg_name)
-            self.__prov_log('delete', 'sec_group', sg_id, sg_name)
+            try:
+                sg_id = oaw.delete_sec_group(self.nova_client, sg_name)
+                self.__prov_log('delete', 'sec_group', sg_id, sg_name)
+            except RuntimeError as e:
+                print "    %s" % e
 
     def reset_nodes(self):
         for node in self.nodes:

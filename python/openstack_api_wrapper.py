@@ -93,6 +93,11 @@ def create_sec_group(client, name, description):
     return client.security_groups.create(name, description)
 
 
+def add_sec_group_rule(client, sec_group_id, ip_protocol, from_port, to_port, cidr):
+    client.security_group_rules.create(parent_group_id=sec_group_id,
+                                       ip_protocol=ip_protocol, from_port=from_port, to_port=to_port, cidr=cidr)
+
+
 def create_local_access_rules(client, to_sec_group_name, from_sec_group_name):
     sg_to = None
     sg_from = None
