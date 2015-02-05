@@ -1,0 +1,9 @@
+---
+- name: Add a ssh key for given account on the frontend
+  hosts: cluster_master
+  sudo: yes
+  tasks:
+  - name: Add key
+    authorized_key: user={{ key_user }} key="{{ item }}"
+    with_file:
+      - "{{ key_file}}"

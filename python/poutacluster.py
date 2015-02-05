@@ -461,10 +461,22 @@ def run_update_and_reboot():
     print cmd
     subprocess.call(shlex.split(cmd))
 
-
-def run_configuration():
+def run_add_key(key, user):
     print
-    print "Checking the connectivity again after the reboot"
+    print 'Adding %s to authorized_keys for user %s' % (key, user)
+    print
+    cmd = "ansible-playbook ../ansible/playbooks/add_ssh_key.yml -i ansible-hosts -f 10"
+    cmd += ' --extra-vars "key_user=%s key_file=%s" ' % (user, key)
+    if os.path.isfile('key.priv'):
+        cmd += ' --private-key key.priv'
+    print cmd
+    subprocess.call(shlex.split(cmd))
+
+
+
+def run_configuration(cluster):
+    print
+    print "Checking the connectivity to the cluster"
     print
     check_connectivity()
     print
@@ -472,8 +484,7 @@ def run_configuration():
     print
     run_main_playbook()
 
-
-def run_first_time_setup():
+def run_first_time_setup(cluster):
     print
     print "First we'll check the connectivity to the cluster"
     print
@@ -491,7 +502,6 @@ def run_first_time_setup():
     print "Run the main playbook to configure the cluster"
     print
     run_main_playbook()
-
 
 def print_usage_instructions(cluster):
     frontend_public_ip = cluster.config['frontend']['public-ip']
@@ -512,11 +522,20 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('command',
-                        choices=['up', 'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup'])
-    parser.add_argument(
-        'num_nodes', metavar='num nodes', nargs='?', type=int, help='number of nodes')
-    args, commands = parser.parse_known_args()
+    subparsers=parser.add_subparsers(dest='command')
+
+    subparsers.add_parser('up').add_argument(
+        'num_nodes', metavar='num nodes', type=int, help='number of nodes')
+
+    subparsers.add_parser('add_key').add_argument(
+        'key_file', metavar='key_file', type=str, help='public key to upload')
+
+    # bulk add all the commands without arguments
+    for cmd in  'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup':
+        sp=subparsers.add_parser(cmd)
+
+
+    args = parser.parse_args()
     command = args.command
 
     # get references to nova and cinder API
@@ -557,7 +576,7 @@ def main():
         # wait for a while for the last nodes to boot
         time.sleep(5)
 
-        run_first_time_setup()
+        run_first_time_setup(cluster)
 
         print
         print "Cluster setup done."
@@ -575,8 +594,16 @@ def main():
     # run ansible configuration scripts on existing cluster
     elif command == 'configure':
         print "Configuring existing cluster with ansible"
-        run_configuration()
+        run_configuration(cluster)
         print_usage_instructions(cluster)
+
+    # add admin ssh key to frontend
+    elif command == 'add_key':
+        kf=args.key_file
+        if not os.path.isabs(kf):
+            kf=os.path.abspath(kf)
+
+        run_add_key(kf, cluster.config['frontend']['admin-user'])
 
     # run hard reset on nodes
     elif command == 'reset_nodes':
