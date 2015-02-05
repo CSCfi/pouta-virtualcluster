@@ -435,7 +435,7 @@ def update_ansible_inventory(cluster):
 def check_connectivity():
     cmd = "ansible -o --sudo -i ansible-hosts '*' -a 'uname -a'"
     if os.path.isfile('key.priv'):
-        cmd += '--private-key key.priv'
+        cmd += ' --private-key key.priv'
     print cmd
     while subprocess.call(shlex.split(cmd)) != 0:
         print "    no full connectivity yet, waiting a bit and retrying"
