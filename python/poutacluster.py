@@ -461,6 +461,7 @@ def run_update_and_reboot():
     print cmd
     subprocess.call(shlex.split(cmd))
 
+
 def run_add_key(key, user):
     print
     print 'Adding %s to authorized_keys for user %s' % (key, user)
@@ -473,7 +474,6 @@ def run_add_key(key, user):
     subprocess.call(shlex.split(cmd))
 
 
-
 def run_configuration(cluster):
     print
     print "Checking the connectivity to the cluster"
@@ -483,6 +483,7 @@ def run_configuration(cluster):
     print "Run the main playbook to configure the cluster"
     print
     run_main_playbook()
+
 
 def run_first_time_setup(cluster):
     print
@@ -503,6 +504,7 @@ def run_first_time_setup(cluster):
     print
     run_main_playbook()
 
+
 def print_usage_instructions(cluster):
     frontend_public_ip = cluster.config['frontend']['public-ip']
 
@@ -522,7 +524,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    subparsers=parser.add_subparsers(dest='command')
+    subparsers = parser.add_subparsers(dest='command')
 
     subparsers.add_parser('up').add_argument(
         'num_nodes', metavar='num nodes', type=int, help='number of nodes')
@@ -531,9 +533,8 @@ def main():
         'key_file', metavar='key_file', type=str, help='public key to upload')
 
     # bulk add all the commands without arguments
-    for cmd in  'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup':
-        sp=subparsers.add_parser(cmd)
-
+    for cmd in 'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup':
+        sp = subparsers.add_parser(cmd)
 
     args = parser.parse_args()
     command = args.command
@@ -599,9 +600,9 @@ def main():
 
     # add admin ssh key to frontend
     elif command == 'add_key':
-        kf=args.key_file
+        kf = args.key_file
         if not os.path.isabs(kf):
-            kf=os.path.abspath(kf)
+            kf = os.path.abspath(kf)
 
         run_add_key(kf, cluster.config['frontend']['admin-user'])
 
