@@ -295,7 +295,7 @@ class Cluster(object):
             print "Shutting down and deleting %s" % node.name
             oaw.shutdown_vm(self.nova_client, node)
             oaw.delete_vm(node)
-            oaw.wait_for_deletion(self.nova_client, 'server', node.id)
+            oaw.wait_for_deletion(self.nova_client, 'servers', node.id)
             self.__prov_log('delete', 'vm', node.id, node.name)
         self.nodes = []
 
@@ -304,7 +304,7 @@ class Cluster(object):
             print "Shutting down and deleting %s " % self.frontend.name
             oaw.shutdown_vm(self.nova_client, self.frontend)
             oaw.delete_vm(self.frontend)
-            oaw.wait_for_deletion(self.nova_client, 'server', self.frontend.id)
+            oaw.wait_for_deletion(self.nova_client, 'servers', self.frontend.id)
             self.__prov_log('delete', 'vm', self.frontend.id, self.frontend.name)
             self.frontend = None
 
