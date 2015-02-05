@@ -110,12 +110,14 @@ def create_local_access_rules(client, to_sec_group_name, from_sec_group_name):
     client.security_group_rules.create(parent_group_id=sg_to.id, group_id=sg_from.id,
                                        ip_protocol='icmp', from_port=-1, to_port=-1)
 
+
 def delete_sec_group(client, name):
     sgs = client.security_groups.list()
     for sg in sgs:
         if sg.name == name:
             client.security_groups.delete(sg.id)
             return sg.id
+
 
 def check_server_group_exists(client, name, policies):
     sgs = client.server_groups.list()
@@ -149,6 +151,7 @@ def delete_server_group(client, name):
 
     raise RuntimeError('Requested server group "%s" does not exist' % name)
 
+
 def create_vm(client, name, image_id, flavor_id, key_name, sec_groups, network_id=None, server_group_id=None):
     nics = None
     if network_id:
@@ -167,6 +170,17 @@ def create_vm(client, name, image_id, flavor_id, key_name, sec_groups, network_i
 def delete_vm(instance):
     instance.delete()
     print "    deleted instance %s" % instance.id
+
+
+def wait_for_deletion(client, type, instance_id):
+    while True:
+        try:
+            getattr(client, type).get(instance_id)
+            print '    object %s still exists' % instance_id
+            time.sleep(5)
+        except:
+            # object not found anymore
+            break
 
 
 def shutdown_vm(nova_client, node):
