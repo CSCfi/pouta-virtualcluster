@@ -72,9 +72,8 @@ class Cluster(object):
         if 'public-ip' in spec.keys():
             ip = spec['public-ip']
             print "    associating public IP %s" % ip
-            fip=oaw.associate_floating_address(self.nova_client, instance, ip)
+            fip = oaw.associate_floating_address(self.nova_client, instance, ip)
             print "    associated public IP %s" % fip.ip
-
 
     def __provision_volumes(self, instance, volspec):
         vd = chr(ord('c'))
@@ -128,7 +127,7 @@ class Cluster(object):
             self.__prov_log('create', 'sec-group', sg.id, sg.name)
 
             # add user configured rules
-            if self.config['cluster'].has_key('ext-secgroup-rules'):
+            if 'ext-secgroup-rules' in self.config['cluster'].keys():
                 for rule in self.config['cluster']['ext-secgroup-rules']:
                     print "    adding rule '%s'" % rule
                     proto, from_port, to_port, cidr = rule.strip().split()
@@ -490,7 +489,7 @@ def run_add_key(key, user):
     subprocess.call(shlex.split(cmd))
 
 
-def run_configuration(cluster):
+def run_configuration():
     print
     print "Checking the connectivity to the cluster"
     print
@@ -501,7 +500,7 @@ def run_configuration(cluster):
     run_main_playbook()
 
 
-def run_first_time_setup(cluster):
+def run_first_time_setup():
     print
     print "First we'll check the connectivity to the cluster"
     print
@@ -593,7 +592,7 @@ def main():
         # wait for a while for the last nodes to boot
         time.sleep(5)
 
-        run_first_time_setup(cluster)
+        run_first_time_setup()
 
         print
         print "Cluster setup done."
@@ -611,7 +610,7 @@ def main():
     # run ansible configuration scripts on existing cluster
     elif command == 'configure':
         print "Configuring existing cluster with ansible"
-        run_configuration(cluster)
+        run_configuration()
         print_usage_instructions(cluster)
 
     # add admin ssh key to frontend
