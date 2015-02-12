@@ -198,11 +198,11 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
 
   - cluster name
   - ssh-key name
-  - public IP
+  - public IP (use 'auto' for any unused floating IP available for project)
   - image
   - flavors
   - volume sizes (NOTE: when testing, keep the volume size small, otherwise deleting the cluster storage will take a long time). Keep the volume names and order as they are.
-  - groups - you can comment out software groups that you don't need
+  - groups (you can comment out software groups that you don't need)
 
 * bring the cluster up with a frontend and two nodes::
 
