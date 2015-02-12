@@ -265,3 +265,55 @@ def get_addresses(instance, ip_type='fixed'):
     networks = instance.addresses
     return [x['addr'] for x in itertools.chain.from_iterable(networks.values())
             if x['OS-EXT-IPS:type'] == ip_type]
+
+
+def find_free_floating_ip(nova_client):
+    fips = nova_client.floating_ips.list()
+    for fip in fips:
+        if not fip.instance_id:
+            return fip
+
+
+def associate_floating_address(nova_client, vm, floating_ip='auto'):
+    # statically selected floating ip
+    if floating_ip != 'auto':
+        fips = nova_client.floating_ips.list()
+        for fip in fips:
+            if fip.ip == floating_ip:
+                if fip.instance_id:
+                    raise RuntimeError('Selected floating IP is already in use: %s' % floating_ip)
+                else:
+                    vm.add_floating_ip(fip)
+                    return fip
+
+        raise RuntimeError('Selected floating IP is not allocated to project: %s' % floating_ip)
+
+    # automatically assigned
+    if floating_ip == 'auto':
+        while True:
+            # find a free address
+            free_fip = find_free_floating_ip(nova_client)
+
+            # if all are taken, allocate a new one
+            if not free_fip:
+                free_fip = nova_client.floating_ips.create(nova_client.floating_ip_pools.list()[0].name)
+                print '    no free IPs, allocated a new IP for the project: %s' % free_fip.ip
+
+            print '    selected free IP: %s' % free_fip.ip
+
+            # associate the ip with the server
+            # there is a potential race here, so minimize the risk by checking if we actually got the ip
+            # after a short sleep and if not, try again
+            vm.add_floating_ip(free_fip)
+            time.sleep(5)
+            fips = nova_client.floating_ips.list()
+            for fip in fips:
+                if fip.ip == free_fip.ip:
+                    if fip.instance_id == vm.id:
+                        return fip
+                    else:
+                        print '    selected IP was grabbed for another VM: %s %s' % (fip.ip, fip.instance_id)
+                        print '    retrying to auto-associate'
+                        break
+
+    raise RuntimeError('Invalid floating IP specified: %s' % floating_ip)

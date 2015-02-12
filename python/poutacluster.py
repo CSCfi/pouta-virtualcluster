@@ -66,14 +66,15 @@ class Cluster(object):
 
         return instance
 
-    @staticmethod
-    def __provision_vm_addresses(instance, spec):
+    def __provision_vm_addresses(self, instance, spec):
 
         print '    instance internal IP: %s' % oaw.get_addresses(instance)[0]
         if 'public-ip' in spec.keys():
             ip = spec['public-ip']
             print "    associating public IP %s" % ip
-            instance.add_floating_ip(ip)
+            fip=oaw.associate_floating_address(self.nova_client, instance, ip)
+            print "    associated public IP %s" % fip.ip
+
 
     def __provision_volumes(self, instance, volspec):
         vd = chr(ord('c'))
