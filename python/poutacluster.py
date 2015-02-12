@@ -224,6 +224,13 @@ class Cluster(object):
     def get_volumes_for_node(self, vm_name):
         return self.__filter_volumes_for_node(self.volumes, vm_name)
 
+    def refresh_state(self):
+        self.frontend=oaw.get_instance(self.nova_client, self.frontend.id)
+        updated_nodes=[]
+        for node in self.nodes:
+            updated_nodes.append(oaw.get_instance(self.nova_client, node.id))
+        self.nodes=updated_nodes
+
     def load_provisioned_state(self):
         print "Loading cluster state from OpenStack"
 
@@ -615,6 +622,9 @@ def main():
         print
         print "Cluster setup done."
         print
+
+        # refresh cluster state so that all provisioned aspects like floating IP addresses are present
+        cluster.refresh_state()
         print_usage_instructions(cluster)
 
     # bring cluster down
