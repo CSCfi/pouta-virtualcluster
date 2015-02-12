@@ -197,7 +197,7 @@ class Cluster(object):
                                            self.config['cluster']['network'],
                                            server_group_name=self.name)
                 self.nodes.append(node)
-                oaw.wait_for_state(self.nova_client, 'servers', node.id, 'BUILD')
+                oaw.wait_for_state(self.nova_client, 'servers', node.id, 'BUILD|ACTIVE')
 
             print
 
@@ -375,16 +375,28 @@ class Cluster(object):
             # rate limit on resets, otherwise API will give an error
             time.sleep(3)
 
+    @staticmethod
+    def get_public_ip(vm):
+        floating_ips = oaw.get_addresses(vm, 'floating')
+        if len(floating_ips) > 0:
+            return floating_ips[0]
+        else:
+            return None
+
+    @staticmethod
+    def get_private_ip(vm):
+        return oaw.get_addresses(vm)[0]
+
     def get_info(self):
         res = []
 
         def vm_info(vm):
             template = '%014s: %s'
             res.append(template % ('name', vm.name))
-            res.append(template % ('internal ip', oaw.get_addresses(vm)[0]))
-            floating_ips = oaw.get_addresses(vm, 'floating')
-            if len(floating_ips) > 0:
-                res.append(template % ('public ip', floating_ips[0]))
+            res.append(template % ('internal ip', self.get_private_ip(vm)))
+            floating_ip = self.get_public_ip(vm)
+            if floating_ip:
+                res.append(template % ('public ip', floating_ip))
             res.append(template % ('flavor', oaw.find_flavor_name_by_id(self.nova_client, vm.flavor['id'])))
             res.append(template % ('image', oaw.find_image_name_by_id(self.nova_client, vm.image['id'])))
             res.append('%014s:' % 'volumes')
@@ -521,16 +533,22 @@ def run_first_time_setup():
 
 
 def print_usage_instructions(cluster):
-    frontend_public_ip = cluster.config['frontend']['public-ip']
+
+    service_ip = cluster.get_public_ip(cluster.frontend)
+    if not service_ip:
+        print "Looks like the frontend does not have a public IP."
+        print "To access the cluster, you need to be able to access it "
+        print "from within the project internal network."
+        service_ip = cluster.get_private_ip(cluster.frontend)
 
     print "To ssh in to the the frontend:"
-    print "    ssh %s@%s" % (cluster.config['frontend']['admin-user'], frontend_public_ip)
+    print "    ssh %s@%s" % (cluster.config['frontend']['admin-user'], service_ip)
     print
     print "To check the web interfaces for Ganglia, Hadoop and Spark, browse to:"
-    print "%020s : %s " % ('Ganglia', 'http://%s/ganglia/' % frontend_public_ip)
-    print "%020s : %s " % ('Hadoop DFS', 'http://%s:50070/' % frontend_public_ip)
-    print "%020s : %s " % ('Hadoop Map-Reduce', 'http://%s:50030/' % frontend_public_ip)
-    print "%020s : %s " % ('Spark', 'http://%s:8080/' % frontend_public_ip)
+    print "%020s : %s " % ('Ganglia', 'http://%s/ganglia/' % service_ip)
+    print "%020s : %s " % ('Hadoop DFS', 'http://%s:50070/' % service_ip)
+    print "%020s : %s " % ('Hadoop Map-Reduce', 'http://%s:50030/' % service_ip)
+    print "%020s : %s " % ('Spark', 'http://%s:8080/' % service_ip)
     print
     print "See README.rst for examples on testing the installation"
 
