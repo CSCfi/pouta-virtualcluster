@@ -5,12 +5,16 @@ cluster:
   network: default
   allow-traffic-from-sec-groups:
     - bastion
+  ext-secgroup-rules:
+    - tcp 22 22 192.168.123.123/32
+    - tcp 80 80 192.168.123.0/24
+
 frontend:
   sec-key: cluster-key
   image: CentOS-6.6
   admin-user: cloud-user
   flavor: mini
-  public-ip: 86.50.168.XXX
+  public-ip: auto
   volumes:
     - name: local_data
       size: 10
@@ -23,6 +27,7 @@ frontend:
     - hadoop_jobtracker
     - spark_master
     - ge_master
+
 node:
   sec-key: cluster-key
   image: CentOS-6.6
