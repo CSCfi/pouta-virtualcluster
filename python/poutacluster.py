@@ -225,11 +225,11 @@ class Cluster(object):
         return self.__filter_volumes_for_node(self.volumes, vm_name)
 
     def refresh_state(self):
-        self.frontend=oaw.get_instance(self.nova_client, self.frontend.id)
-        updated_nodes=[]
+        self.frontend = oaw.get_instance(self.nova_client, self.frontend.id)
+        updated_nodes = []
         for node in self.nodes:
             updated_nodes.append(oaw.get_instance(self.nova_client, node.id))
-        self.nodes=updated_nodes
+        self.nodes = updated_nodes
 
     def load_provisioned_state(self):
         print "Loading cluster state from OpenStack"
@@ -540,7 +540,6 @@ def run_first_time_setup():
 
 
 def print_usage_instructions(cluster):
-
     service_ip = cluster.get_public_ip(cluster.frontend)
     if not service_ip:
         print "Looks like the frontend does not have a public IP."
@@ -574,7 +573,7 @@ def main():
 
     # bulk add all the commands without arguments
     for cmd in 'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup':
-        sp = subparsers.add_parser(cmd)
+        subparsers.add_parser(cmd)
 
     args = parser.parse_args()
     command = args.command
