@@ -1,7 +1,7 @@
 ---
 - name: Ensure all needed packages are installed (Ubuntu)
   when: is_debian_or_ubuntu
-  apt: pkg="{{ item }}" state=installed update_cache=yes
+  apt: pkg="{{ item }}" state=installed
   with_items:
     - default-jdk
     - sudo

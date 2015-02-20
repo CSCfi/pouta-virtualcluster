@@ -16,7 +16,7 @@ Currently poutacluster can provision:
   - frontend and compute nodes can have different images, flavors and keys
   - frontend has a public IP
   - there is a volume for local persistent data
-  - frontend has a separate shared volume, exported with NFS to the worker nodes from */shared_data*
+  - frontend has a separate shared volume, exported with NFS to the worker nodes from */mnt/shared_data*
   - frontend also exports */home*
 
 * Ganglia for monitoring
@@ -267,10 +267,10 @@ The jobs are probably executed on different nodes.
 
 Create a few empty 1G files on the NFS share and calculate sha256 sums over zero data::
 
-    sudo mkdir /shared_data/tmp
-    sudo chmod 1777 /shared_data/tmp
-    for i in {001..050}; do truncate --size 1G /shared_data/tmp/zeroes.1G.$i; done
-    for i in {001..050}; do qsub -b y -N shasum-$i sha256sum /shared_data/tmp/zeroes.1G.$i; done
+    sudo mkdir /mnt/shared_data/tmp
+    sudo chmod 1777 /mnt/shared_data/tmp
+    for i in {001..050}; do truncate --size 1G /mnt/shared_data/tmp/zeroes.1G.$i; done
+    for i in {001..050}; do qsub -b y -N shasum-$i sha256sum /mnt/shared_data/tmp/zeroes.1G.$i; done
     cat shasum-*.o*
 
 During the test, you should see quite a lot of network traffic from frontend out to the nodes, as the sparse files are
@@ -316,9 +316,9 @@ resulting 50GB of text data. Make sure you have big enough *shared_data* and *lo
 
 First download the input data and replicate it to get more data::
 
-    sudo mkdir /shared_data/tmp
-    sudo chmod 1777 /shared_data/tmp
-    cd /shared_data/tmp
+    sudo mkdir /mnt/shared_data/tmp
+    sudo chmod 1777 /mnt/shared_data/tmp
+    cd /mnt/shared_data/tmp
     mkdir dbpedia
     cd dbpedia
     curl -sS http://data.dws.informatik.uni-mannheim.de/dbpedia/2014/en/long_abstracts_en.ttl.bz2 \
@@ -326,7 +326,7 @@ First download the input data and replicate it to get more data::
 
 Then upload it to HDFS::
 
-    hadoop distcp file:///shared_data/tmp/dbpedia hdfs://$HOSTNAME:9000/sparktest/dbpedia
+    hadoop distcp file:///mnt/shared_data/tmp/dbpedia hdfs://$HOSTNAME:9000/sparktest/dbpedia
 
 Make sure Spark is running::
 
@@ -343,7 +343,7 @@ First we can test reading the input from NFS and writing the results to HDFS::
 
     import java.net._
     val hostname = InetAddress.getLocalHost.getHostName
-    val dbpediaText = sc.textFile("file:///shared_data/tmp/dbpedia")
+    val dbpediaText = sc.textFile("file:///mnt/shared_data/tmp/dbpedia")
     val counts = dbpediaText.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
     counts.saveAsTextFile("hdfs://"+hostname+":9000/sparktest/output-1")
 

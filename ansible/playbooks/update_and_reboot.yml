@@ -9,20 +9,19 @@
   - name: fix /etc/hosts after cloud-init
     lineinfile: dest=/etc/hosts state=absent regexp="{{ inventory_hostname }}"
 
-  - name: clean yum state
+  - name: clean yum state (CentOS)
     action: shell yum clean all
     when: is_centos
 
-  - name: update packages
+  - name: update packages (CentOS)
     yum: name=* state=latest
     when: is_centos
 
-  - name: disable SELinux on CentOS
+  - name: disable SELinux (CentOS)
     action: selinux state=disabled
-    when: ansible_distribution == 'CentOS'
     when: is_centos
 
-  - name: reboot
+  - name: reboot (CentOS)
     action: shell reboot
     when: is_centos
 

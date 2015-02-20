@@ -7,7 +7,7 @@
     spark_flavor: "hadoop1"
     tar_url: "http://www.eu.apache.org/dist/spark/spark-{{ spark_version }}/spark-{{ spark_version }}-bin-{{ spark_flavor }}.tgz"
     spark_confdir: "/opt/spark/conf"
-    spark_localdir: "/mnt/data/spark-local"
+    spark_localdir: "{{ local_data_dir }}"
   tasks: 
     - include: spark/tasks/install.yml
     - include: spark/tasks/conf.yml

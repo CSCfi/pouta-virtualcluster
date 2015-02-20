@@ -177,7 +177,8 @@ class Cluster(object):
         # reload information after instance has reached active state
         self.frontend = oaw.get_instance(self.nova_client, self.frontend.id)
         self.__provision_vm_addresses(self.frontend, self.config['frontend'])
-        self.__provision_volumes(self.frontend, self.config['frontend']['volumes'])
+        if 'volumes' in self.config['frontend']:
+            self.__provision_volumes(self.frontend, self.config['frontend']['volumes'])
 
     def __provision_nodes(self, num_nodes):
         node_base = self.name + '-node'
@@ -211,7 +212,8 @@ class Cluster(object):
             node = oaw.get_instance(self.nova_client, node.id)
             self.nodes[i] = node
             self.__provision_vm_addresses(node, self.config['node'])
-            self.__provision_volumes(node, self.config['node']['volumes'])
+            if 'volumes' in self.config['node']:
+                self.__provision_volumes(node, self.config['node']['volumes'])
             print
 
     @staticmethod
@@ -440,6 +442,7 @@ class Cluster(object):
 
         return res
 
+
     def generate_ansible_inventory(self):
 
         # noinspection PyListCreation
@@ -448,21 +451,71 @@ class Cluster(object):
         if not self.frontend:
             return lines
 
+        def get_line_for_host(config, vm):
+            name = vm.name
+            ip = oaw.get_addresses(vm)[0]
+            admin_user = config['admin-user']
+            return '%s ansible_ssh_host=%s ansible_ssh_user=%s' % (name, ip, admin_user)
+
+        def get_volume_vars(conf):
+            vol_vars = []
+            if 'volumes' in conf:
+                for vol_spec in conf['volumes']:
+                    if vol_spec['name'] == 'local_data':
+                        if 'device' in vol_spec:
+                            vol_vars.append('local_data_device=%s' % vol_spec['device'])
+                        else:
+                            vol_vars.append('local_data_device=/dev/vdc')
+                    elif vol_spec['name'] == 'shared_data':
+                        if 'device' in vol_spec:
+                            vol_vars.append('shared_data_device=%s' % vol_spec['device'])
+                        else:
+                            vol_vars.append('shared_data_device=/dev/vdd')
+                    else:
+                        print 'WARN: unknown magic volume name %s ' % vol_spec['name']
+            return vol_vars
+
+        # generate frontend groups
         for group in self.config['frontend']['groups']:
             lines.append('[%s]' % group)
-            name = self.frontend.name
-            ip = oaw.get_addresses(self.frontend)[0]
-            admin_user = self.config['frontend']['admin-user']
-            lines.append('%s ansible_ssh_host=%s ansible_ssh_user=%s' % (name, ip, admin_user))
+            lines.append(get_line_for_host(self.config['frontend'], self.frontend))
             lines.append('')
 
+        lines.append('[frontend]')
+        lines.append(get_line_for_host(self.config['frontend'], self.frontend))
+        lines.append('')
+
+        # generate node groups
         for group in self.config['node']['groups']:
             lines.append('[%s]' % group)
             for node in self.nodes:
-                name = node.name
-                ip = oaw.get_addresses(node)[0]
-                admin_user = self.config['node']['admin-user']
-                lines.append('%s ansible_ssh_host=%s ansible_ssh_user=%s' % (name, ip, admin_user))
+                lines.append(get_line_for_host(self.config['node'], node))
+            lines.append('')
+
+        lines.append('[node]')
+        for node in self.nodes:
+            lines.append(get_line_for_host(self.config['node'], node))
+        lines.append('')
+
+        # generate frontend variables
+        lines.append('[frontend:vars]')
+        lines.extend(get_volume_vars(self.config['frontend']))
+        lines.append('')
+
+        # generate node variables
+        lines.append('[node:vars]')
+        lines.extend(get_volume_vars(self.config['node']))
+        lines.append('')
+
+        # generate all groups meta group and define global variables
+        lines.append('[all:children]')
+        lines.append('frontend')
+        lines.append('node')
+        lines.append('')
+
+        lines.append('[all:vars]')
+        lines.append('local_data_dir=/mnt/local_data')
+        lines.append('shared_data_dir=/mnt/shared_data')
 
         return lines
 
@@ -656,6 +709,7 @@ def main():
     # run ansible configuration scripts on existing cluster
     elif command == 'configure':
         print "Configuring existing cluster with ansible"
+        update_ansible_inventory(cluster)
         run_configuration()
         print_usage_instructions(cluster)
 

@@ -6,15 +6,26 @@
 
     - include: common/tasks/nfs.yml
 
-    - filesystem: fstype=ext4 dev=/dev/vdd opts="-L shared"
-    - mount: name=/shared_data src='LABEL=shared' state=mounted opts=defaults fstype=ext4
+    - name: format shared data
+      filesystem: fstype=ext4 dev={{ shared_data_device }} opts="-L shared"
+      when: shared_data_device is defined
 
-    - nfsexport: path=/shared_data dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,async
+    - name: make sure shared_data_dir exists
+      file: path="{{ shared_data_dir }}" state=directory
+
+    - name: mount shared data
+      mount: name={{ shared_data_dir }} src='LABEL=shared' state=mounted opts=defaults fstype=ext4
+      when: shared_data_device is defined
+
+    - name: export shared data
+      nfsexport: path={{ shared_data_dir }} dest=/etc/exports clients="{{ groups.cluster_slave }}"
+                 options=rw,no_root_squash,async
       notify:
         - restart nfsd
         - restart nfs-kernel-server
 
-    - nfsexport: path=/home dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,sync
+    - name: export home
+      nfsexport: path=/home dest=/etc/exports clients="{{ groups.cluster_slave }}" options=rw,no_root_squash,sync
       notify:
         - restart nfsd
         - restart nfs-kernel-server
@@ -38,9 +49,18 @@
   sudo: yes
   tasks:
     - include: common/tasks/iptables.yml trusted_hosts="{{ groups.all }}" default_accept=1
-    - action: filesystem fstype=ext4 dev=/dev/vdc opts="-L data"
-    - name: mount /mnt/data
-      action: mount name=/mnt/data src=LABEL=data fstype=auto opts=rw,nofail state=mounted
+
+    - name: make sure local_data_dir exists
+      file: path="{{ local_data_dir }}" state=directory
+
+    - name: format local data
+      filesystem: fstype=ext4 dev={{ local_data_device }} opts="-L data"
+      when: local_data_device is defined
+
+    - name: mount local data
+      action: mount name={{ local_data_dir }} src=LABEL=data fstype=auto opts=rw,nofail state=mounted
+      when: local_data_device is defined
+
   handlers:
     - include: common/handlers/main.yml
 
@@ -49,4 +69,5 @@
   sudo: yes
   tasks:
     - include: common/tasks/nfs-clients.yml nfsserver="{{ groups.cluster_master[0] }}" nfspath=/home nfsmount=/home
-    - include: common/tasks/nfs-clients.yml nfsserver="{{ groups.cluster_master[0] }}" nfspath=/shared_data nfsmount=/shared_data
+    - include: common/tasks/nfs-clients.yml nfsserver="{{ groups.cluster_master[0] }}" nfspath={{ shared_data_dir }}
+               nfsmount={{ shared_data_dir }}

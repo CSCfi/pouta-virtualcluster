@@ -1,7 +1,7 @@
 ---
 # Ubuntu-specific actions
 - name: install nfs server
-  action: apt pkg=nfs-kernel-server state=present update_cache=yes
+  action: apt pkg=nfs-kernel-server state=present
   when: is_debian_or_ubuntu
   tags:
     -nfs

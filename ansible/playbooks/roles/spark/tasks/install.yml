@@ -1,12 +1,12 @@
 ---
-- name: install dependencies
+- name: install dependencies (CentOS)
   yum: pkg="{{ item }}" state=present
   with_items:
     - java-openjdk
   when: is_centos
 
-- name: install dependencies
-  apt: pkg="{{ item }}" state=installed update_cache=yes
+- name: install dependencies (Ubuntu)
+  apt: pkg="{{ item }}" state=installed
   with_items:
     - default-jdk
   when: is_debian_or_ubuntu

@@ -4,9 +4,9 @@
   sudo: yes
   tasks:
     - include: common/tasks/iptables.yml trusted_hosts="{{ groups.all }}" default_accept=1
-    - action: filesystem fstype=ext4 dev=/dev/vdc opts="-L data"  
-    - name: mount /mnt/data
-      action: mount name=/mnt/data src=LABEL=data fstype=auto opts=rw,nofail state=mounted
+#    - action: filesystem fstype=ext4 dev=/dev/vdc opts="-L data"
+#    - name: mount /mnt/data
+#      action: mount name=/mnt/data src=LABEL=data fstype=auto opts=rw,nofail state=mounted
     
   handlers:
     - include: common/handlers/main.yml
@@ -18,7 +18,7 @@
     deburl: http://www.nic.funet.fi/pub/mirrors/apache.org/hadoop/common/hadoop-1.2.1/hadoop_1.2.1-1_x86_64.deb
     rpmurl: http://www.nic.funet.fi/pub/mirrors/apache.org/hadoop/common/hadoop-1.2.1/hadoop-1.2.1-1.x86_64.rpm
     hd_confdir: "/etc/hadoop/"
-    hd_tmpdir: "/mnt/data/hadoop"
+    hd_tmpdir: "{{ local_data_dir }}/hadoop"
     mapred_localdir: "{{ hd_tmpdir }}/mapred"
     hd_namedir: "{{ hd_tmpdir }}/dfs/name"
     hd_datadir: "{{ hd_tmpdir }}/dfs/data"

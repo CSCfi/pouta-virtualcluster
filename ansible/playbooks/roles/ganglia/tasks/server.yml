@@ -1,6 +1,6 @@
 ---
 - name: Install ganglia server (Ubuntu)
-  action: apt pkg={{item}} state=latest update_cache=yes
+  action: apt pkg={{item}} state=latest
   with_items:
     - ganglia-monitor
     - ganglia-webfrontend

@@ -16,7 +16,7 @@
 #
 
 - name: Install iptables packages (Ubuntu)
-  action: apt pkg={{item}} update_cache=yes
+  action: apt pkg={{item}}
   when: is_debian_or_ubuntu
   with_items:
     - iptables
