@@ -305,26 +305,38 @@ class Cluster(object):
                 oaw.wait_for_state(self.cinder_client, 'volumes', vol.id, 'in-use')
                 print
 
-    def down(self):
+    def down(self, clean_shutdown=True):
         # take nodes down in reverse order
         for node in self.nodes[::-1]:
-            print "Shutting down and deleting %s" % node.name
-            oaw.shutdown_vm(self.nova_client, node)
+            if clean_shutdown:
+                print "Shutting down and deleting %s" % node.name
+                oaw.shutdown_vm(self.nova_client, node)
+            else:
+                print "Deleting %s" % node.name
             oaw.delete_vm(node)
-            oaw.wait_for_deletion(self.nova_client, 'servers', node.id)
             self.__prov_log('delete', 'vm', node.id, node.name)
+            time.sleep(1)
+
+        # check that all the nodes have actually been deleted
+        for node in self.nodes[::-1]:
+            print "Checking deletion state for %s" % node.name
+            oaw.wait_for_deletion(self.nova_client, 'servers', node.id)
+
         self.nodes = []
 
         # take the frontend down last
         if self.frontend:
-            print "Shutting down and deleting %s " % self.frontend.name
-            oaw.shutdown_vm(self.nova_client, self.frontend)
+            if clean_shutdown:
+                print "Shutting down and deleting %s " % self.frontend.name
+                oaw.shutdown_vm(self.nova_client, self.frontend)
+            else:
+                print "Deleting %s " % self.frontend.name
             oaw.delete_vm(self.frontend)
             oaw.wait_for_deletion(self.nova_client, 'servers', self.frontend.id)
             self.__prov_log('delete', 'vm', self.frontend.id, self.frontend.name)
             self.frontend = None
 
-    def destroy_volumes(self):
+    def destroy_volumes(self, grace_time=10):
         if self.frontend or len(self.nodes) > 0:
             print
             print "ERROR: cluster seems to be up, refusing to delete volumes"
@@ -337,12 +349,13 @@ class Cluster(object):
 
         print "Destroying all %d volumes (=persistent data) for cluster '%s'" % (len(self.volumes), self.name)
         print "Hit ctrl-c now to abort"
-        print "Starting in ",
-        for i in range(10, -1, -1):
-            print i, " ",
-            sys.stdout.flush()
-            time.sleep(1)
-        print ""
+        if grace_time > 0:
+            print "Starting in ",
+            for i in range(grace_time, -1, -1):
+                print i, " ",
+                sys.stdout.flush()
+                time.sleep(1)
+            print ""
 
         # delete volumes in reverse order, frontend last
         for vol in self.volumes[::-1]:
@@ -571,8 +584,14 @@ def main():
     subparsers.add_parser('add_key').add_argument(
         'key_file', metavar='key_file', type=str, help='public key to upload')
 
+    subparsers.add_parser('wipe').add_argument(
+        '--yes_i_know_what_im_doing', action='store_true', help='confirmation option')
+
+    subparsers.add_parser('down').add_argument(
+        '--unclean', action='store_true', help='immediate power off')
+
     # bulk add all the commands without arguments
-    for cmd in 'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup':
+    for cmd in 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup':
         subparsers.add_parser(cmd)
 
     args = parser.parse_args()
@@ -631,7 +650,7 @@ def main():
         print
         print "Shutting cluster down, starting with last nodes"
         print
-        cluster.down()
+        cluster.down(clean_shutdown=(not args.unclean))
         update_ansible_inventory(cluster)
 
     # run ansible configuration scripts on existing cluster
@@ -665,6 +684,20 @@ def main():
         print
         for line in cluster.get_info():
             print line
+    # wipe all provisioned resources, no questions asked
+    elif command == 'wipe':
+        if not args.yes_i_know_what_im_doing:
+            print
+            print 'ERROR: Confirmation option missing, refusing to wipe'
+            print 'See poutacluster wipe -h'
+            print
+            sys.exit(1)
+
+        print 'Wiping cluster'
+        cluster.down(clean_shutdown=False)
+        cluster.destroy_volumes(grace_time=0)
+        cluster.cleanup()
+        update_ansible_inventory(cluster)
 
     else:
         raise RuntimeError("Unknown command '%s'" % command)
