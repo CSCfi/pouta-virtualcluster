@@ -1,6 +1,6 @@
 ---
 - name: Install ganglia monitor (Ubuntu)
-  action: apt pkg={{item}} state=latest
+  apt: name={{item}} state=latest
   with_items:
     - ganglia-monitor
   when: is_debian_or_ubuntu
@@ -8,7 +8,7 @@
     - ganglia
 
 - name: Install ganglia monitor (CentOS)
-  action: yum pkg={{item}} state=latest
+  yum: name={{item}} state=latest
   with_items:
     - ganglia-gmond
   when: is_centos
@@ -16,7 +16,7 @@
     - ganglia
 
 - name: Configure gmond
-  action: template src=ganglia/templates/gmond.conf.j2 dest=/etc/ganglia/gmond.conf
+  template: src=ganglia/templates/gmond.conf.j2 dest=/etc/ganglia/gmond.conf
   notify:
     - restart ganglia-monitor
     - restart gmond
@@ -26,13 +26,13 @@
     - gmond
 
 - name: Ensure gmond is running and enabled (CentOS)
-  action: service name=gmond state=started enabled=true
+  service: name=gmond state=started enabled=true
   when: is_centos
   tags:
     - ganglia
 
 - name: Ensure ganglia-monitor is running and enabled (Ubuntu)
-  action: service name=ganglia-monitor state=started enabled=true
+  service: name=ganglia-monitor state=started enabled=true
   when: is_debian_or_ubuntu
   tags:
     - ganglia

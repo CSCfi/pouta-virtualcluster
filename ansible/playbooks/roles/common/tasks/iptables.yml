@@ -16,7 +16,7 @@
 #
 
 - name: Install iptables packages (Ubuntu)
-  action: apt pkg={{item}}
+  apt: name={{item}}
   when: is_debian_or_ubuntu
   with_items:
     - iptables
@@ -24,7 +24,7 @@
   tags: iptables
 
 - name: Install iptables package (CentOS)
-  action: yum pkg=iptables
+  yum: name=iptables
   when: is_centos
   tags: iptables
 

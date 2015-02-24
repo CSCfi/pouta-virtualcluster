@@ -1,6 +1,6 @@
 ---
 - name: Install ganglia server (Ubuntu)
-  action: apt pkg={{item}} state=latest
+  apt: name={{item}} state=latest
   with_items:
     - ganglia-monitor
     - ganglia-webfrontend
@@ -10,7 +10,7 @@
     - ganglia
 
 - name: Install ganglia server (CentOS)
-  action: yum pkg={{item}} state=latest
+  yum: name={{item}} state=latest
   with_items:
     - ganglia-gmond
     - ganglia-gmetad

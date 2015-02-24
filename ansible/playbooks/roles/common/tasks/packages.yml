@@ -1,24 +1,24 @@
 ---
-- name: update the system
+- name: update the system (CentOS)
   yum: name=* state=latest
   when: is_centos
 
-- name: update the system
+- name: update the system (Ubuntu)
   apt: upgrade=full
   when: is_debian_or_ubuntu
 
-- name: install acpid for soft reboots
+- name: install acpid for soft reboots (CentOS)
   yum: name=acpid state=present
   when: is_centos
 
-- name: install acpid for soft reboots
+- name: install acpid for soft reboots (Ubuntu)
   apt: name=acpi state=present
   when: is_debian_or_ubuntu
 
 - name: configure and start acpid service
   service: name=acpid state=started enabled=true
 
-- name: install misc auxiliary packages
+- name: install misc auxiliary packages (CentOS)
   yum: name="{{ item }}" state=present
   with_items:
   - btrfs-progs
@@ -29,7 +29,7 @@
   - dstat
   when: is_centos
 
-- name: install misc auxiliary packages
+- name: install misc auxiliary packages (Ubuntu)
   apt: name="{{ item }}" state=present
   with_items:
   - btrfs-tools

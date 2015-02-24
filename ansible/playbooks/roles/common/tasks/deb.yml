@@ -4,11 +4,11 @@
   when: is_debian_or_ubuntu
 
 - name: Ensure extra repositories are present (Ubuntu)
-  action: apt_repository repo="deb http://archive.ubuntu.com/ubuntu {{ansible_distribution_release}} universe multiverse" state=present
+  apt_repository: repo="deb http://archive.ubuntu.com/ubuntu {{ansible_distribution_release}} universe multiverse" state=present
   when: is_ubuntu
 
 - name: Ensure aptitude package is installed (Ubuntu)
-  action: apt name=aptitude state=installed
+  apt: name=aptitude state=installed
   when: is_debian_or_ubuntu
   with_items:
     - aptitude
