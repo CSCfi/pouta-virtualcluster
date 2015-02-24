@@ -1,0 +1,52 @@
+---
+- name: Update, bootstrap and reboot if necessary
+  hosts: all
+  sudo: yes
+  tasks:
+    - name: stop cloud-init managing /etc/hosts
+      action: "lineinfile dest=/etc/cloud/cloud.cfg.d/10_etc_hosts.cfg state=present regexp='^manage_etc_hosts' line='manage_etc_hosts: False'"
+
+    - name: fix /etc/hosts after cloud-init
+      lineinfile: dest=/etc/hosts state=absent regexp="{{ inventory_hostname }}"
+
+    - name: umount ephemeral disk
+      mount: name=/mnt src=/dev/vdb fstype=auto state=unmounted
+
+  #  - name: install xfsprogs (CentOS)
+  #    yum: name=xfsprogs state=present
+  #    when: is_centos
+
+  #  - name: install xfsprogs (Ubuntu)
+  #    apt: name=xfsprogs state=present
+  #    when: is_debian_or_ubuntu
+
+  #  - name: format ephemeral as xfs
+  #    filesystem: fstype=xfs dev=/dev/vdb opts="-L ephemeral0" force=yes
+
+#    - name: format ephemeral as btrfs
+#      filesystem: fstype=btrfs dev=/dev/vdb opts="-L ephemeral0" force=yes
+
+#    - name: mount ephemeral disk again as btrfs
+#      mount: name=/mnt src=/dev/vdb fstype=auto state=mounted opts="compress=lzo,nofail"
+
+    - name: format ephemeral as ext4
+      filesystem: fstype=ext4 dev=/dev/vdb opts="-L ephemeral0" force=yes
+
+    - name: mount ephemeral disk again
+      mount: name=/mnt src=/dev/vdb fstype=auto state=mounted opts="nofail"
+
+    - name: clean yum state (CentOS)
+      shell: yum clean all
+      when: is_centos
+
+    - name: update apt repos (Ubuntu)
+      apt: update_cache=yes
+      when: is_debian_or_ubuntu
+
+    - name: disable SELinux (CentOS)
+      action: selinux state=disabled
+      when: is_centos
+      notify: reboot
+
+  handlers:
+    - include: roles/common/handlers/main.yml
