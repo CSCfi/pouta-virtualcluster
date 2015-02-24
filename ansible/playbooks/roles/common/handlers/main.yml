@@ -36,3 +36,6 @@
 
 - name: kill-HUP sshd
   shell: pkill -HUP sbin/sshd
+
+- name: reboot
+  command: /sbin/reboot
