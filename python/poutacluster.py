@@ -106,11 +106,8 @@ class Cluster(object):
 
             vd = chr(ord(vd) + 1)
 
-    def __provision_sec_groups(self):
-
-        # first external access group for frontend
+    def _provision_ext_sec_group(self, custom_ext_rules=None):
         sg_name_ext = self.name + '-ext'
-
         try:
             oaw.check_secgroup_exists(self.nova_client, sg_name_ext)
         except RuntimeError:
@@ -126,17 +123,21 @@ class Cluster(object):
                                       'Security group for %s external access' % self.name)
             self.__prov_log('create', 'sec-group', sg.id, sg.name)
 
-            # add user configured rules
-            if 'ext-secgroup-rules' in self.config['cluster'].keys():
-                for rule in self.config['cluster']['ext-secgroup-rules']:
-                    print "    adding rule '%s'" % rule
-                    proto, from_port, to_port, cidr = rule.strip().split()
-                    oaw.add_sec_group_rule(self.nova_client, sg.id, ip_protocol=proto, from_port=from_port,
-                                           to_port=to_port, cidr=cidr)
+            # add user configured rules (override the cluster config rules with custom_ext_rules if provided)
+            ext_rules = []
+            if custom_ext_rules:
+                ext_rules = custom_ext_rules
+            elif 'ext-secgroup-rules' in self.config['cluster'].keys():
+                ext_rules = self.config['cluster']['ext-secgroup-rules']
 
-        # then the cluster internal group
+            for rule in ext_rules:
+                print "    adding rule '%s'" % rule
+                proto, from_port, to_port, cidr = rule.strip().split()
+                oaw.add_sec_group_rule(self.nova_client, sg.id, ip_protocol=proto, from_port=from_port,
+                                       to_port=to_port, cidr=cidr)
+
+    def _provision_int_sec_group(self):
         sg_name_int = self.name + '-int'
-
         try:
             oaw.check_secgroup_exists(self.nova_client, sg_name_int)
         except RuntimeError:
@@ -151,6 +152,14 @@ class Cluster(object):
             # add access from other security groups (usually 'bastion')
             for sg in self.config['cluster']['allow-traffic-from-sec-groups']:
                 oaw.create_local_access_rules(self.nova_client, sg_name_int, sg)
+
+    def __provision_sec_groups(self):
+
+        # first external access group for frontend
+        self._provision_ext_sec_group()
+
+        # then the cluster internal group
+        self._provision_int_sec_group()
 
     def __provision_server_group(self):
 
@@ -524,6 +533,23 @@ class Cluster(object):
     def get_provisioning_log(self):
         return self.__provisioning_log[:]
 
+    def update_firewall(self, rules_file):
+        with open(rules_file,'r') as rf:
+            rules=[x.strip() for x in rf.readlines()]
+
+        sg_name=self.name+'-ext'
+        print "Updating firewall rules in sec-group %s" % sg_name
+
+        print "    removing old rules"
+        oaw.delete_sec_group_rules(self.nova_client, sg_name)
+        sg=oaw.find_security_group_by_name(self.nova_client, sg_name)
+        for rule in rules:
+            if not len(rule) or rule.startswith('#'):
+                continue
+            print "    adding rule '%s'" % rule
+            proto, from_port, to_port, cidr = rule.strip().split()
+            oaw.add_sec_group_rule(self.nova_client, sg.id, ip_protocol=proto, from_port=from_port,
+                                       to_port=to_port, cidr=cidr)
 
 def update_ansible_inventory(cluster):
     # update ansible inventory
@@ -650,6 +676,9 @@ def main():
     subparsers.add_parser('add_key').add_argument(
         'key_file', metavar='key_file', type=str, help='public key to upload')
 
+    subparsers.add_parser('update_firewall').add_argument(
+        'rules_file', metavar='rules_file', type=str, help='new set of firewall rules')
+
     subparsers.add_parser('wipe').add_argument(
         '--yes_i_know_what_im_doing', action='store_true', help='confirmation option')
 
@@ -733,6 +762,14 @@ def main():
             kf = os.path.abspath(kf)
 
         run_add_key(kf, cluster.config['frontend']['admin-user'])
+
+    # add admin ssh key to frontend
+    elif command == 'update_firewall':
+        rules_file = args.rules_file
+        if not os.path.isabs(rules_file):
+            rules_file = os.path.abspath(rules_file)
+
+        cluster.update_firewall(rules_file)
 
     # run hard reset on nodes
     elif command == 'reset_nodes':
