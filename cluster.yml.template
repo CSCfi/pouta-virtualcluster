@@ -21,6 +21,7 @@ frontend:
     - name: shared_data
       size: 10
   groups:
+    - common
     - cluster_master
     - ganglia_master
     - hadoop_namenode
@@ -37,6 +38,7 @@ node:
     - name: local_data
       size: 10
   groups:
+    - common
     - cluster_slave
     - ganglia_monitor
     - hadoop_datanode
