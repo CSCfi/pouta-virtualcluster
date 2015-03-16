@@ -196,7 +196,7 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
 
 * check, edit or fill in:
 
-  - cluster name
+  - cluster name (only characters a-z, 0-9 and a hyphen '-' are allowed)
   - ssh-key name
   - public IP (use 'auto' for any unused floating IP available for project)
   - image
