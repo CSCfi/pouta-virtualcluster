@@ -10,6 +10,7 @@ import os
 import shlex
 import subprocess
 import sys
+import re
 import yaml
 import time
 import datetime
@@ -33,7 +34,11 @@ class Cluster(object):
         self.config = config
         self.nova_client = nova_client
         self.cinder_client = cinder_client
-        self.name = config['cluster']['name']
+        if re.match('[a-zA-Z\d-]{1,57}$', config['cluster']['name']):
+            self.name = config['cluster']['name']
+        else:
+            raise RuntimeError('Cluster name can only contain characters a-z, 0-9 and "-"')
+
         self.__provisioning_log = []
 
     def __prov_log(self, action, resource_type, resource_id, info=''):
@@ -534,22 +539,23 @@ class Cluster(object):
         return self.__provisioning_log[:]
 
     def update_firewall(self, rules_file):
-        with open(rules_file,'r') as rf:
-            rules=[x.strip() for x in rf.readlines()]
+        with open(rules_file, 'r') as rf:
+            rules = [x.strip() for x in rf.readlines()]
 
-        sg_name=self.name+'-ext'
+        sg_name = self.name + '-ext'
         print "Updating firewall rules in sec-group %s" % sg_name
 
         print "    removing old rules"
         oaw.delete_sec_group_rules(self.nova_client, sg_name)
-        sg=oaw.find_security_group_by_name(self.nova_client, sg_name)
+        sg = oaw.find_security_group_by_name(self.nova_client, sg_name)
         for rule in rules:
             if not len(rule) or rule.startswith('#'):
                 continue
             print "    adding rule '%s'" % rule
             proto, from_port, to_port, cidr = rule.strip().split()
             oaw.add_sec_group_rule(self.nova_client, sg.id, ip_protocol=proto, from_port=from_port,
-                                       to_port=to_port, cidr=cidr)
+                                   to_port=to_port, cidr=cidr)
+
 
 def update_ansible_inventory(cluster):
     # update ansible inventory
