@@ -22,7 +22,7 @@ Currently poutacluster can provision:
 * Ganglia for monitoring
 * GridEngine for batch processing
 * Apache Hadoop 1.2.1
-* Apache Spark 1.2.0
+* Apache Spark 1.3.0
 
 How it works
 ============
