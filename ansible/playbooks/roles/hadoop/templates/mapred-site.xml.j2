@@ -21,14 +21,19 @@
 		<value>{{ hd_confdir }}/hosts.exclude</value>
 	</property>
 
+     <property>
+        <name>mapred.child.java.opts</name>
+        <value>-Xmx{{ (ansible_memtotal_mb / ansible_processor_vcpus) | int }}m</value>
+      </property>
+
     <!-- set the number of slots -->
 	<property>
 		<name>mapred.tasktracker.map.tasks.maximum</name>
-		<value>4</value>
+		<value>{{ ansible_processor_vcpus }}</value>
 	</property>
 	<property>
 		<name>mapred.tasktracker.reduce.tasks.maximum</name>
-		<value>4</value>
+		<value>{{ ansible_processor_vcpus }}</value>
 	</property>
 
 {% if ansible_distribution == "CentOS" %}
