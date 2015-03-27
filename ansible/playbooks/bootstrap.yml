@@ -3,14 +3,20 @@
   hosts: all
   sudo: yes
   tasks:
+
     - name: stop cloud-init managing /etc/hosts
-      action: "lineinfile dest=/etc/cloud/cloud.cfg.d/10_etc_hosts.cfg state=present regexp='^manage_etc_hosts' line='manage_etc_hosts: False'"
+      lineinfile: "dest=/etc/cloud/cloud.cfg.d/10_etc_hosts.cfg state=present regexp='^manage_etc_hosts' line='manage_etc_hosts: False' create=yes"
 
     - name: fix /etc/hosts after cloud-init
       lineinfile: dest=/etc/hosts state=absent regexp="{{ inventory_hostname }}"
 
+    - name: check if ephemeral disk exists
+      stat: path=/dev/vdb
+      register: stat_dev_vdb
+
     - name: umount ephemeral disk
       mount: name=/mnt src=/dev/vdb fstype=auto state=unmounted
+      when: stat_dev_vdb.stat.exists
 
   #  - name: install xfsprogs (CentOS)
   #    yum: name=xfsprogs state=present
@@ -23,17 +29,25 @@
   #  - name: format ephemeral as xfs
   #    filesystem: fstype=xfs dev=/dev/vdb opts="-L ephemeral0" force=yes
 
+#    - name: install btrfs-tools (Ubuntu)
+#      apt: name=btrfs-tools state=present
+#      when: is_debian_or_ubuntu
+
 #    - name: format ephemeral as btrfs
 #      filesystem: fstype=btrfs dev=/dev/vdb opts="-L ephemeral0" force=yes
+#      when: stat_dev_vdb.stat.exists
 
 #    - name: mount ephemeral disk again as btrfs
-#      mount: name=/mnt src=/dev/vdb fstype=auto state=mounted opts="compress=lzo,nofail"
+#      mount: name=/mnt src=/dev/vdb fstype=auto state=mounted opts="noatime,nofail"
+#      when: stat_dev_vdb.stat.exists
 
     - name: format ephemeral as ext4
       filesystem: fstype=ext4 dev=/dev/vdb opts="-L ephemeral0" force=yes
+      when: stat_dev_vdb.stat.exists
 
     - name: mount ephemeral disk again
       mount: name=/mnt src=/dev/vdb fstype=auto state=mounted opts="nofail"
+      when: stat_dev_vdb.stat.exists
 
     - name: clean yum state (CentOS)
       shell: yum clean all
