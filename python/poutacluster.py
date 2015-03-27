@@ -16,6 +16,8 @@ import time
 import datetime
 import openstack_api_wrapper as oaw
 
+NUM_PARALLEL_ANSIBLE_TASKS = 32
+
 """
 Class to represent a cluster instance with one frontend and multiple nodes
 """
@@ -29,6 +31,7 @@ class Cluster(object):
     volumes = []
     nova_client = None
     cinder_client = None
+    server_group_policy = None
 
     def __init__(self, config, nova_client, cinder_client):
         self.config = config
@@ -38,6 +41,15 @@ class Cluster(object):
             self.name = config['cluster']['name']
         else:
             raise RuntimeError('Cluster name can only contain characters a-z, 0-9 and "-"')
+
+        if 'server-group-policy' in self.config['cluster']:
+            policy = self.config['cluster']['server-group-policy']
+            if policy in ['none', 'disable']:
+                self.server_group_policy = None
+            else:
+                self.server_group_policy = policy
+        else:
+            self.server_group_policy = 'anti-affinity'
 
         self.__provisioning_log = []
 
@@ -50,8 +62,9 @@ class Cluster(object):
         image_id = oaw.check_image_exists(self.nova_client, spec['image'])
         flavor_id = oaw.check_flavor_exists(self.nova_client, spec['flavor'])
         server_group_id = None
-        if server_group_name:
-            server_group_id = oaw.check_server_group_exists(self.nova_client, server_group_name, ['anti-affinity'])
+        if self.server_group_policy and server_group_name:
+            server_group_id = oaw.check_server_group_exists(
+                self.nova_client, server_group_name, [self.server_group_policy])
 
         # network needs more logic. We accept the magic keyword 'default', which will then try to use the tenant's
         # default network labeled after the tenant name
@@ -85,7 +98,11 @@ class Cluster(object):
         for volconf in volspec:
             vol_name = '%s/%s' % (instance.name, volconf['name'])
             vol_size = volconf['size']
-            device = '/dev/vd%s' % vd
+            if 'device' in volconf:
+                device = volconf['device']
+            else:
+                device = '/dev/vd%s' % vd
+                vd = chr(ord(vd) + 1)
 
             # check if there is already a volume or do we need to create one
             ex_vol = None
@@ -108,8 +125,6 @@ class Cluster(object):
                                                    vol_name, vol_size, dev=device, async=True)
                 self.__prov_log('create', 'volume', vol.id, vol_name)
                 self.volumes.append(vol)
-
-            vd = chr(ord(vd) + 1)
 
     def _provision_ext_sec_group(self, custom_ext_rules=None):
         sg_name_ext = self.name + '-ext'
@@ -155,8 +170,9 @@ class Cluster(object):
             # add intra-cluster access
             oaw.create_local_access_rules(self.nova_client, sg_name_int, sg_name_int)
             # add access from other security groups (usually 'bastion')
-            for sg in self.config['cluster']['allow-traffic-from-sec-groups']:
-                oaw.create_local_access_rules(self.nova_client, sg_name_int, sg)
+            if 'allow-traffic-from-sec-groups' in self.config['cluster']:
+                for sg in self.config['cluster']['allow-traffic-from-sec-groups']:
+                    oaw.create_local_access_rules(self.nova_client, sg_name_int, sg)
 
     def __provision_sec_groups(self):
 
@@ -167,13 +183,16 @@ class Cluster(object):
         self._provision_int_sec_group()
 
     def __provision_server_group(self):
+        if not self.server_group_policy:
+            print '    server group disabled'
+            return
 
         try:
-            oaw.check_server_group_exists(self.nova_client, self.name, ['anti-affinity'])
+            oaw.check_server_group_exists(self.nova_client, self.name, [self.server_group_policy])
         except RuntimeError:
             print
-            print 'No server group for %s exists, creating one' % self.name
-            sg_id = oaw.create_server_group(self.nova_client, self.name, ['anti-affinity'])
+            print "No server group for %s exists, creating one with '%s' policy" % (self.name, self.server_group_policy)
+            sg_id = oaw.create_server_group(self.nova_client, self.name, [self.server_group_policy])
             self.__prov_log('create', 'server-group', sg_id, self.name)
 
     def __provision_frontend(self):
@@ -414,6 +433,9 @@ class Cluster(object):
 
     @staticmethod
     def get_public_ip(vm):
+        if not vm:
+            return None
+
         floating_ips = oaw.get_addresses(vm, 'floating')
         if len(floating_ips) > 0:
             return floating_ips[0]
@@ -454,6 +476,10 @@ class Cluster(object):
                 vm_info(node)
         else:
             res.append('    No nodes found')
+
+        if self.frontend:
+            res.append('Endpoints:')
+            res.extend(get_endpoint_instructions(self, self.get_public_ip(self.frontend)))
 
         return res
 
@@ -569,7 +595,7 @@ def update_ansible_inventory(cluster):
 
 
 def check_connectivity():
-    cmd = "ansible -o --sudo -i ansible-hosts '*' -a 'uname -a' -f 32"
+    cmd = "ansible -o --sudo -i ansible-hosts '*' -a 'uname -a' -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
     print cmd
@@ -579,7 +605,7 @@ def check_connectivity():
 
 
 def run_main_playbook():
-    cmd = "ansible-playbook ../ansible/playbooks/site.yml -i ansible-hosts -f 32"
+    cmd = "ansible-playbook ../ansible/playbooks/site.yml -i ansible-hosts -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
     print cmd
@@ -589,7 +615,7 @@ def run_main_playbook():
 
 
 def run_bootstrap():
-    cmd = "ansible-playbook ../ansible/playbooks/bootstrap.yml -i ansible-hosts -f 32"
+    cmd = "ansible-playbook ../ansible/playbooks/bootstrap.yml -i ansible-hosts -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
     print cmd
@@ -602,7 +628,7 @@ def run_add_key(key, user):
     print
     print 'Adding %s to authorized_keys for user %s' % (key, user)
     print
-    cmd = "ansible-playbook ../ansible/playbooks/add_ssh_key.yml -i ansible-hosts -f 32"
+    cmd = "ansible-playbook ../ansible/playbooks/add_ssh_key.yml -i ansible-hosts -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
     cmd += ' --extra-vars "key_user=%s key_file=%s" ' % (user, key)
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
@@ -643,6 +669,29 @@ def run_first_time_setup():
     run_main_playbook()
 
 
+def get_endpoint_instructions(cluster, service_ip):
+    res = []
+    res.append("To ssh in to the the frontend:")
+    res.append("    ssh %s@%s" % (cluster.config['frontend']['admin-user'], service_ip))
+    res.append("")
+    if 'groups' in cluster.config['frontend']:
+        groups = [x for x in cluster.config['frontend']['groups'] if
+                  x in ['spark_master', 'hadoop_namenode', 'hadoop_jobtracker', 'ganglia_master']]
+        if len(groups) > 0:
+            res.append("To check the web interfaces, browse to:")
+            if 'ganglia_master' in groups:
+                res.append("%020s : %s " % ('Ganglia', 'http://%s/ganglia/' % service_ip))
+            if 'hadoop_namenode' in groups:
+                res.append("%020s : %s " % ('Hadoop DFS', 'http://%s:50070/' % service_ip))
+            if 'hadoop_jobtracker' in groups:
+                res.append("%020s : %s " % ('Hadoop Map-Reduce', 'http://%s:50030/' % service_ip))
+            if 'spark_master' in groups:
+                res.append("%020s : %s " % ('Spark', 'http://%s:8080/' % service_ip))
+            res.append("")
+
+    return res
+
+
 def print_usage_instructions(cluster):
     service_ip = cluster.get_public_ip(cluster.frontend)
     if not service_ip:
@@ -650,23 +699,8 @@ def print_usage_instructions(cluster):
         print "To access the cluster, you need to be able to access it "
         print "from within the project internal network."
         service_ip = cluster.get_private_ip(cluster.frontend)
-    print "To ssh in to the the frontend:"
-    print "    ssh %s@%s" % (cluster.config['frontend']['admin-user'], service_ip)
-    print
-    if 'groups' in cluster.config['frontend']:
-        groups = [x for x in cluster.config['frontend']['groups'] if
-                  x in ['spark_master', 'hadoop_namenode', 'hadoop_jobtracker', 'ganglia_master']]
-        if len(groups) > 0:
-            print "To check the web interfaces, browse to:"
-            if 'ganglia_master' in groups:
-                print "%020s : %s " % ('Ganglia', 'http://%s/ganglia/' % service_ip)
-            if 'hadoop_namenode' in groups:
-                print "%020s : %s " % ('Hadoop DFS', 'http://%s:50070/' % service_ip)
-            if 'hadoop_jobtracker' in groups:
-                print "%020s : %s " % ('Hadoop Map-Reduce', 'http://%s:50030/' % service_ip)
-            if 'spark_master' in groups:
-                print "%020s : %s " % ('Spark', 'http://%s:8080/' % service_ip)
-            print
+    for line in get_endpoint_instructions(cluster, service_ip):
+        print line
     print "See README.rst for examples on testing the installation"
 
 
