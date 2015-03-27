@@ -35,12 +35,16 @@
   when: groups.hadoop_jobtracker is defined
 
 - name: set JAVA_HOME environment variable
-  action: lineinfile dest="{{ hd_confdir }}/hadoop-env.sh" regexp='export JAVA_HOME.*' line='export JAVA_HOME=/usr/lib/jvm/default-java'
+  lineinfile: dest="{{ hd_confdir }}/hadoop-env.sh" regexp='export JAVA_HOME.*' line='export JAVA_HOME=/usr/lib/jvm/default-java'
   when: is_debian_or_ubuntu
 
 - name: set JAVA_HOME environment variable
-  action: lineinfile dest="{{ hd_confdir }}/hadoop-env.sh" regexp='export JAVA_HOME.*' line='export JAVA_HOME=/usr/lib/jvm/jre'
+  lineinfile: dest="{{ hd_confdir }}/hadoop-env.sh" regexp='export JAVA_HOME.*' line='export JAVA_HOME=/usr/lib/jvm/jre'
   when: is_centos
+
+- name: unset extra (memory) options for clients
+  replace: dest="{{ hd_confdir }}/hadoop-env.sh" regexp='(^export HADOOP_CLIENT_OPTS=.*)' replace='#\1'
+  tags: testing123
 
 - name: Format name directory
   action: shell sudo -u hdfs hadoop namenode -format -force -nonInteractive creates={{ hd_namedir }}/image/fsimage
