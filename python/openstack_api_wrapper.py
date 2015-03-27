@@ -17,7 +17,7 @@ import cinderclient.v1
 def get_clients():
     un = os.environ['OS_USERNAME']
     pw = os.environ['OS_PASSWORD']
-    tenant = os.environ['OS_TENANT_ID']
+    tenant = os.environ['OS_TENANT_NAME']
     auth_url = os.environ['OS_AUTH_URL']
     nova_client = novaclient.v1_1.client.Client(un, pw, tenant, auth_url)
     cinder_client = cinderclient.v1.client.Client(un, pw, tenant, auth_url)
