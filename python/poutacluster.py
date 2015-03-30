@@ -69,7 +69,7 @@ class Cluster(object):
         # network needs more logic. We accept the magic keyword 'default', which will then try to use the tenant's
         # default network labeled after the tenant name
         if network == 'default':
-            network = os.environ['OS_TENANT_ID']
+            network = os.environ['OS_TENANT_NAME']
         network_id = oaw.check_network_exists(self.nova_client, network)
 
         print '    creating %s: %s  - %s' % (name, spec['image'], spec['flavor'])
