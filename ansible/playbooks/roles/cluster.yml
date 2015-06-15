@@ -16,6 +16,9 @@
     - name: mount shared data
       mount: name={{ shared_data_dir }} src='LABEL=shared' state=mounted opts=defaults fstype=ext4
       when: shared_data_device is defined
+      notify:
+        - restart nfsd
+        - restart nfs-kernel-server
 
     - name: export shared data
       nfsexport: path={{ shared_data_dir }} dest=/etc/exports clients="{{ groups.cluster_slave }}"
