@@ -3,9 +3,10 @@
   name: Install Spark
   sudo: yes
   vars:
-    spark_version: "1.3.0"
+    spark_version: "1.3.1"
     spark_flavor: "hadoop1"
-    tar_url: "http://www.eu.apache.org/dist/spark/spark-{{ spark_version }}/spark-{{ spark_version }}-bin-{{ spark_flavor }}.tgz"
+#    tar_url: "http://www.eu.apache.org/dist/spark/spark-{{ spark_version }}/spark-{{ spark_version }}-bin-{{ spark_flavor }}.tgz"
+    tar_url: "http://www.nic.funet.fi/pub/mirrors/apache.org/spark/spark-{{ spark_version }}/spark-{{ spark_version }}-bin-{{ spark_flavor }}.tgz"
     spark_confdir: "/opt/spark/conf"
     spark_localdir: "{{ local_data_dir }}"
   tasks: 
