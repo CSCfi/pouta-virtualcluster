@@ -1,6 +1,6 @@
 ---
 cluster:
-  name: my-cluster
+  name: [FILL IN YOUR CLUSTER NAME HERE]
   description: Testing poutacluster provisioning
   network: default
   allow-traffic-from-sec-groups:
@@ -33,7 +33,7 @@ node:
   sec-key: cluster-key
   image: CentOS-6.6
   admin-user: cloud-user
-  flavor: small
+  flavor: mini
   volumes:
     - name: local_data
       size: 10
