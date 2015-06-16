@@ -595,13 +595,23 @@ def update_ansible_inventory(cluster):
 
 
 def check_connectivity():
-    cmd = "ansible -o --sudo -i ansible-hosts '*' -a 'uname -a' -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
+#    cmd = "ansible -o --sudo -i ansible-hosts '*' -a 'uname -a' -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
+    cmd = \
+        "ansible -o -i ansible-hosts '*' -c local -m wait_for " \
+        " -a '" \
+        " port=22" \
+        " host=\"{{ ansible_ssh_host | default(inventory_hostname) }}\"" \
+        " search_regex=OpenSSH " \
+        " timeout=120" \
+        "'"
+    cmd += ' -f %d' % NUM_PARALLEL_ANSIBLE_TASKS
+
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
     print cmd
     while subprocess.call(shlex.split(cmd)) != 0:
         print "    no full connectivity yet, waiting a bit and retrying"
-        time.sleep(10)
+        time.sleep(2)
 
 
 def run_main_playbook():
