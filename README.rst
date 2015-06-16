@@ -5,9 +5,10 @@ Poutacluster
 **NOTE: This is a work in progress**
 
 Pouta-virtualcluster is a helper script and a set of Ansible playbooks to quickly setup a cluster in **pouta.csc.fi**
-IaaS service. It draws heavily from *ElastiCluster* by *Grid Computing Competence Center, University of Zurich*.
-Most of the Ansible playbooks are based on ElastiCluster, however provisioning the VMs is written from scratch to
-support volumes (persistent storage) and runs directly against OpenStack Python API.
+IaaS service. It draws heavily from the *ElastiCluster* by *Grid Computing Competence Center, University of Zurich*,
+especially most of the Ansible playbooks are based on ElastiCluster. Provisioning code, however, is written from scratch
+to support volumes (persistent storage), server affinity and security group relations. It runs directly against
+OpenStack Python API.
 
 Currently poutacluster can provision:
 
@@ -120,7 +121,7 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 
 * Associate a floating IP (allocate one for the project if you don't already have a spare)
 
-* Log in to the bastion host with ssh as either *cloud-user* or *ubuntu* user, depending on the image::
+* Log in to the bastion host with ssh as *cloud-user* user, depending on the image::
 
     ssh cloud-user@86.50.16X.XXX:
     
@@ -157,6 +158,10 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 * import the key::
 
     nova keypair-add  --pub-key .ssh/id_rsa.pub cluster-key
+
+* make a backup copy of the keypair, so you don't lose it if something bad happens to your bastion host
+
+    [me@workstation]$ scp -r cloud-user@86.50.168.XXX:.ssh dot_ssh_from_bastion
 
 
 Installation
