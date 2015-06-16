@@ -5,9 +5,10 @@ Poutacluster
 **NOTE: This is a work in progress**
 
 Pouta-virtualcluster is a helper script and a set of Ansible playbooks to quickly setup a cluster in **pouta.csc.fi**
-IaaS service. It draws heavily from *ElastiCluster* by *Grid Computing Competence Center, University of Zurich*.
-Most of the Ansible playbooks are based on ElastiCluster, however provisioning the VMs is written from scratch to
-support volumes (persistent storage) and runs directly against OpenStack Python API.
+IaaS service. It draws heavily from the *ElastiCluster* by *Grid Computing Competence Center, University of Zurich*,
+especially most of the Ansible playbooks are based on ElastiCluster. Provisioning code, however, is written from scratch
+to support volumes (persistent storage), server affinity and security group relations. It runs directly against
+OpenStack Python API.
 
 Currently poutacluster can provision:
 
@@ -16,13 +17,13 @@ Currently poutacluster can provision:
   - frontend and compute nodes can have different images, flavors and keys
   - frontend has a public IP
   - there is a volume for local persistent data
-  - frontend has a separate shared volume, exported with NFS to the worker nodes from */shared_data*
+  - frontend has a separate shared volume, exported with NFS to the worker nodes from */mnt/shared_data*
   - frontend also exports */home*
 
 * Ganglia for monitoring
 * GridEngine for batch processing
 * Apache Hadoop 1.2.1
-* Apache Spark 1.2.2
+* Apache Spark 1.3.1
 
 How it works
 ============
@@ -120,7 +121,7 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 
 * Associate a floating IP (allocate one for the project if you don't already have a spare)
 
-* Log in to the bastion host with ssh as either *cloud-user* or *ubuntu* user, depending on the image::
+* Log in to the bastion host with ssh as *cloud-user* user, depending on the image::
 
     ssh cloud-user@86.50.16X.XXX:
     
@@ -157,6 +158,10 @@ Create a small management VM to act as a "bastion" host (http://en.wikipedia.org
 * import the key::
 
     nova keypair-add  --pub-key .ssh/id_rsa.pub cluster-key
+
+* make a backup copy of the keypair, so you don't lose it if something bad happens to your bastion host
+
+    [me@workstation]$ scp -r cloud-user@86.50.168.XXX:.ssh dot_ssh_from_bastion
 
 
 Installation
@@ -196,7 +201,7 @@ Log in to the bastion host, source the openrc.sh and start deploying the cluster
 
 * check, edit or fill in:
 
-  - cluster name
+  - cluster name (only characters a-z, 0-9 and a hyphen '-' are allowed)
   - ssh-key name
   - public IP (use 'auto' for any unused floating IP available for project)
   - image
@@ -267,10 +272,10 @@ The jobs are probably executed on different nodes.
 
 Create a few empty 1G files on the NFS share and calculate sha256 sums over zero data::
 
-    sudo mkdir /shared_data/tmp
-    sudo chmod 1777 /shared_data/tmp
-    for i in {001..050}; do truncate --size 1G /shared_data/tmp/zeroes.1G.$i; done
-    for i in {001..050}; do qsub -b y -N shasum-$i sha256sum /shared_data/tmp/zeroes.1G.$i; done
+    sudo mkdir /mnt/shared_data/tmp
+    sudo chmod 1777 /mnt/shared_data/tmp
+    for i in {001..050}; do truncate --size 1G /mnt/shared_data/tmp/zeroes.1G.$i; done
+    for i in {001..050}; do qsub -b y -N shasum-$i sha256sum /mnt/shared_data/tmp/zeroes.1G.$i; done
     cat shasum-*.o*
 
 During the test, you should see quite a lot of network traffic from frontend out to the nodes, as the sparse files are
@@ -316,9 +321,9 @@ resulting 50GB of text data. Make sure you have big enough *shared_data* and *lo
 
 First download the input data and replicate it to get more data::
 
-    sudo mkdir /shared_data/tmp
-    sudo chmod 1777 /shared_data/tmp
-    cd /shared_data/tmp
+    sudo mkdir /mnt/shared_data/tmp
+    sudo chmod 1777 /mnt/shared_data/tmp
+    cd /mnt/shared_data/tmp
     mkdir dbpedia
     cd dbpedia
     curl -sS http://data.dws.informatik.uni-mannheim.de/dbpedia/2014/en/long_abstracts_en.ttl.bz2 \
@@ -326,7 +331,7 @@ First download the input data and replicate it to get more data::
 
 Then upload it to HDFS::
 
-    hadoop distcp file:///shared_data/tmp/dbpedia hdfs://$HOSTNAME:9000/sparktest/dbpedia
+    hadoop distcp file:///mnt/shared_data/tmp/dbpedia hdfs://$HOSTNAME:9000/sparktest/dbpedia
 
 Make sure Spark is running::
 
@@ -343,7 +348,7 @@ First we can test reading the input from NFS and writing the results to HDFS::
 
     import java.net._
     val hostname = InetAddress.getLocalHost.getHostName
-    val dbpediaText = sc.textFile("file:///shared_data/tmp/dbpedia")
+    val dbpediaText = sc.textFile("file:///mnt/shared_data/tmp/dbpedia")
     val counts = dbpediaText.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_ + _)
     counts.saveAsTextFile("hdfs://"+hostname+":9000/sparktest/output-1")
 

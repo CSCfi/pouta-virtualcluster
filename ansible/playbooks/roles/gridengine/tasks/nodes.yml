@@ -1,13 +1,13 @@
 ---
 - name: Install GridEngine APT packages
-  action: apt pkg={{item}} state=latest
+  apt: name={{item}} state=latest
   when: is_debian_or_ubuntu
   with_items:
     - gridengine-client
     - gridengine-exec
 
 - name: Install GridEngine RPM packages
-  action: yum pkg={{item}} state=latest
+  yum: name={{item}} state=latest
   when: is_centos
   with_items:
     - gridengine-execd

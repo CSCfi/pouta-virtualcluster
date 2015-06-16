@@ -4,9 +4,9 @@
     - "{{ spark_localdir }}"
   
 - name: configure slaves file
-  action: template src=spark/templates/slaves.j2 dest="{{ spark_confdir }}/slaves" owner=root mode=0644
-  when: inventory_hostname in groups.hadoop_namenode
+  template: src=spark/templates/slaves.j2 dest="{{ spark_confdir }}/slaves" owner=root mode=0644
+  when: inventory_hostname in groups.frontend
 
 - name: copy spark-env.sh 
-  action: template dest="{{ spark_confdir }}/spark-env.sh" src=spark/files/spark-env.sh owner=root group=root mode=0755
+  template: dest="{{ spark_confdir }}/spark-env.sh" src=spark/templates/spark-env.sh.j2 owner=root group=root mode=0755
   

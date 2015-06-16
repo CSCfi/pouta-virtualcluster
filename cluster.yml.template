@@ -1,6 +1,6 @@
 ---
 cluster:
-  name: my-cluster
+  name: [FILL IN YOUR CLUSTER NAME HERE]
   description: Testing poutacluster provisioning
   network: default
   allow-traffic-from-sec-groups:
@@ -21,6 +21,7 @@ frontend:
     - name: shared_data
       size: 10
   groups:
+    - common
     - cluster_master
     - ganglia_master
     - hadoop_namenode
@@ -32,11 +33,12 @@ node:
   sec-key: cluster-key
   image: CentOS-6.6
   admin-user: cloud-user
-  flavor: small
+  flavor: mini
   volumes:
     - name: local_data
       size: 10
   groups:
+    - common
     - cluster_slave
     - ganglia_monitor
     - hadoop_datanode

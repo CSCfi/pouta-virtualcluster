@@ -1,6 +1,6 @@
 ---
 - name: Add a ssh key for given account on the frontend
-  hosts: cluster_master
+  hosts: frontend
   sudo: yes
   tasks:
   - name: Add key

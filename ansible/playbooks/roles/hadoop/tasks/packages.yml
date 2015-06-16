@@ -1,7 +1,7 @@
 ---
 - name: Ensure all needed packages are installed (Ubuntu)
   when: is_debian_or_ubuntu
-  apt: pkg="{{ item }}" state=installed update_cache=yes
+  apt: name="{{ item }}" state=installed
   with_items:
     - default-jdk
     - sudo
@@ -10,7 +10,7 @@
 
 - name: Ensure all needed packages are installed (CentOS)
   when: is_centos
-  yum: pkg="{{ item }}" state=installed
+  yum: name="{{ item }}" state=installed
   with_items:
     - java-openjdk
     - sudo

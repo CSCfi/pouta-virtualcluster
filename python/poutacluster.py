@@ -10,10 +10,13 @@ import os
 import shlex
 import subprocess
 import sys
+import re
 import yaml
 import time
 import datetime
 import openstack_api_wrapper as oaw
+
+NUM_PARALLEL_ANSIBLE_TASKS = 32
 
 """
 Class to represent a cluster instance with one frontend and multiple nodes
@@ -28,12 +31,26 @@ class Cluster(object):
     volumes = []
     nova_client = None
     cinder_client = None
+    server_group_policy = None
 
     def __init__(self, config, nova_client, cinder_client):
         self.config = config
         self.nova_client = nova_client
         self.cinder_client = cinder_client
-        self.name = config['cluster']['name']
+        if re.match('[a-zA-Z\d-]{1,57}$', config['cluster']['name']):
+            self.name = config['cluster']['name']
+        else:
+            raise RuntimeError('Cluster name can only contain characters a-z, 0-9 and "-"')
+
+        if 'server-group-policy' in self.config['cluster']:
+            policy = self.config['cluster']['server-group-policy']
+            if policy in ['none', 'disable']:
+                self.server_group_policy = None
+            else:
+                self.server_group_policy = policy
+        else:
+            self.server_group_policy = 'anti-affinity'
+
         self.__provisioning_log = []
 
     def __prov_log(self, action, resource_type, resource_id, info=''):
@@ -45,13 +62,14 @@ class Cluster(object):
         image_id = oaw.check_image_exists(self.nova_client, spec['image'])
         flavor_id = oaw.check_flavor_exists(self.nova_client, spec['flavor'])
         server_group_id = None
-        if server_group_name:
-            server_group_id = oaw.check_server_group_exists(self.nova_client, server_group_name, ['anti-affinity'])
+        if self.server_group_policy and server_group_name:
+            server_group_id = oaw.check_server_group_exists(
+                self.nova_client, server_group_name, [self.server_group_policy])
 
         # network needs more logic. We accept the magic keyword 'default', which will then try to use the tenant's
         # default network labeled after the tenant name
         if network == 'default':
-            network = os.environ['OS_TENANT_ID']
+            network = os.environ['OS_TENANT_NAME']
         network_id = oaw.check_network_exists(self.nova_client, network)
 
         print '    creating %s: %s  - %s' % (name, spec['image'], spec['flavor'])
@@ -80,7 +98,11 @@ class Cluster(object):
         for volconf in volspec:
             vol_name = '%s/%s' % (instance.name, volconf['name'])
             vol_size = volconf['size']
-            device = '/dev/vd%s' % vd
+            if 'device' in volconf:
+                device = volconf['device']
+            else:
+                device = '/dev/vd%s' % vd
+                vd = chr(ord(vd) + 1)
 
             # check if there is already a volume or do we need to create one
             ex_vol = None
@@ -104,13 +126,8 @@ class Cluster(object):
                 self.__prov_log('create', 'volume', vol.id, vol_name)
                 self.volumes.append(vol)
 
-            vd = chr(ord(vd) + 1)
-
-    def __provision_sec_groups(self):
-
-        # first external access group for frontend
+    def _provision_ext_sec_group(self, custom_ext_rules=None):
         sg_name_ext = self.name + '-ext'
-
         try:
             oaw.check_secgroup_exists(self.nova_client, sg_name_ext)
         except RuntimeError:
@@ -126,17 +143,21 @@ class Cluster(object):
                                       'Security group for %s external access' % self.name)
             self.__prov_log('create', 'sec-group', sg.id, sg.name)
 
-            # add user configured rules
-            if 'ext-secgroup-rules' in self.config['cluster'].keys():
-                for rule in self.config['cluster']['ext-secgroup-rules']:
-                    print "    adding rule '%s'" % rule
-                    proto, from_port, to_port, cidr = rule.strip().split()
-                    oaw.add_sec_group_rule(self.nova_client, sg.id, ip_protocol=proto, from_port=from_port,
-                                           to_port=to_port, cidr=cidr)
+            # add user configured rules (override the cluster config rules with custom_ext_rules if provided)
+            ext_rules = []
+            if custom_ext_rules:
+                ext_rules = custom_ext_rules
+            elif 'ext-secgroup-rules' in self.config['cluster'].keys():
+                ext_rules = self.config['cluster']['ext-secgroup-rules']
 
-        # then the cluster internal group
+            for rule in ext_rules:
+                print "    adding rule '%s'" % rule
+                proto, from_port, to_port, cidr = rule.strip().split()
+                oaw.add_sec_group_rule(self.nova_client, sg.id, ip_protocol=proto, from_port=from_port,
+                                       to_port=to_port, cidr=cidr)
+
+    def _provision_int_sec_group(self):
         sg_name_int = self.name + '-int'
-
         try:
             oaw.check_secgroup_exists(self.nova_client, sg_name_int)
         except RuntimeError:
@@ -149,17 +170,29 @@ class Cluster(object):
             # add intra-cluster access
             oaw.create_local_access_rules(self.nova_client, sg_name_int, sg_name_int)
             # add access from other security groups (usually 'bastion')
-            for sg in self.config['cluster']['allow-traffic-from-sec-groups']:
-                oaw.create_local_access_rules(self.nova_client, sg_name_int, sg)
+            if 'allow-traffic-from-sec-groups' in self.config['cluster']:
+                for sg in self.config['cluster']['allow-traffic-from-sec-groups']:
+                    oaw.create_local_access_rules(self.nova_client, sg_name_int, sg)
+
+    def __provision_sec_groups(self):
+
+        # first external access group for frontend
+        self._provision_ext_sec_group()
+
+        # then the cluster internal group
+        self._provision_int_sec_group()
 
     def __provision_server_group(self):
+        if not self.server_group_policy:
+            print '    server group disabled'
+            return
 
         try:
-            oaw.check_server_group_exists(self.nova_client, self.name, ['anti-affinity'])
+            oaw.check_server_group_exists(self.nova_client, self.name, [self.server_group_policy])
         except RuntimeError:
             print
-            print 'No server group for %s exists, creating one' % self.name
-            sg_id = oaw.create_server_group(self.nova_client, self.name, ['anti-affinity'])
+            print "No server group for %s exists, creating one with '%s' policy" % (self.name, self.server_group_policy)
+            sg_id = oaw.create_server_group(self.nova_client, self.name, [self.server_group_policy])
             self.__prov_log('create', 'server-group', sg_id, self.name)
 
     def __provision_frontend(self):
@@ -177,7 +210,8 @@ class Cluster(object):
         # reload information after instance has reached active state
         self.frontend = oaw.get_instance(self.nova_client, self.frontend.id)
         self.__provision_vm_addresses(self.frontend, self.config['frontend'])
-        self.__provision_volumes(self.frontend, self.config['frontend']['volumes'])
+        if 'volumes' in self.config['frontend']:
+            self.__provision_volumes(self.frontend, self.config['frontend']['volumes'])
 
     def __provision_nodes(self, num_nodes):
         node_base = self.name + '-node'
@@ -198,7 +232,6 @@ class Cluster(object):
                                            server_group_name=self.name)
                 self.nodes.append(node)
                 oaw.wait_for_state(self.nova_client, 'servers', node.id, 'BUILD|ACTIVE')
-
             print
 
         # synchronous part after nodes are active
@@ -211,7 +244,8 @@ class Cluster(object):
             node = oaw.get_instance(self.nova_client, node.id)
             self.nodes[i] = node
             self.__provision_vm_addresses(node, self.config['node'])
-            self.__provision_volumes(node, self.config['node']['volumes'])
+            if 'volumes' in self.config['node']:
+                self.__provision_volumes(node, self.config['node']['volumes'])
             print
 
     @staticmethod
@@ -295,36 +329,50 @@ class Cluster(object):
         print "Provisioning %d cluster nodes" % num_nodes
         self.__provision_nodes(num_nodes)
 
-        print
-        print "Checking volume attach state"
-        for node in self.nodes:
-            for vol in self.volumes:
-                if not vol.display_name.startswith(node.name + '/'):
-                    continue
-                print "    %s" % vol.display_name
-                oaw.wait_for_state(self.cinder_client, 'volumes', vol.id, 'in-use')
-                print
+        # only wait for attaching if there are volumes to be attached.
+        if 'volumes' in self.config['node']:
+            print
+            print "Checking volume attach state"
+            for node in self.nodes:
+                for vol in self.volumes:
+                    if not vol.display_name.startswith(node.name + '/'):
+                        continue
+                    print "    %s" % vol.display_name
+                    oaw.wait_for_state(self.cinder_client, 'volumes', vol.id, 'in-use')
+                    print
 
-    def down(self):
+    def down(self, clean_shutdown=True):
         # take nodes down in reverse order
         for node in self.nodes[::-1]:
-            print "Shutting down and deleting %s" % node.name
-            oaw.shutdown_vm(self.nova_client, node)
+            if clean_shutdown:
+                print "Shutting down and deleting %s" % node.name
+                oaw.shutdown_vm(self.nova_client, node)
+            else:
+                print "Deleting %s" % node.name
             oaw.delete_vm(node)
-            oaw.wait_for_deletion(self.nova_client, 'servers', node.id)
             self.__prov_log('delete', 'vm', node.id, node.name)
+            time.sleep(1)
+
+        # check that all the nodes have actually been deleted
+        for node in self.nodes[::-1]:
+            print "Checking deletion state for %s" % node.name
+            oaw.wait_for_deletion(self.nova_client, 'servers', node.id)
+
         self.nodes = []
 
         # take the frontend down last
         if self.frontend:
-            print "Shutting down and deleting %s " % self.frontend.name
-            oaw.shutdown_vm(self.nova_client, self.frontend)
+            if clean_shutdown:
+                print "Shutting down and deleting %s " % self.frontend.name
+                oaw.shutdown_vm(self.nova_client, self.frontend)
+            else:
+                print "Deleting %s " % self.frontend.name
             oaw.delete_vm(self.frontend)
             oaw.wait_for_deletion(self.nova_client, 'servers', self.frontend.id)
             self.__prov_log('delete', 'vm', self.frontend.id, self.frontend.name)
             self.frontend = None
 
-    def destroy_volumes(self):
+    def destroy_volumes(self, grace_time=10):
         if self.frontend or len(self.nodes) > 0:
             print
             print "ERROR: cluster seems to be up, refusing to delete volumes"
@@ -337,12 +385,13 @@ class Cluster(object):
 
         print "Destroying all %d volumes (=persistent data) for cluster '%s'" % (len(self.volumes), self.name)
         print "Hit ctrl-c now to abort"
-        print "Starting in ",
-        for i in range(10, -1, -1):
-            print i, " ",
-            sys.stdout.flush()
-            time.sleep(1)
-        print ""
+        if grace_time > 0:
+            print "Starting in ",
+            for i in range(grace_time, -1, -1):
+                print i, " ",
+                sys.stdout.flush()
+                time.sleep(1)
+            print ""
 
         # delete volumes in reverse order, frontend last
         for vol in self.volumes[::-1]:
@@ -384,6 +433,9 @@ class Cluster(object):
 
     @staticmethod
     def get_public_ip(vm):
+        if not vm:
+            return None
+
         floating_ips = oaw.get_addresses(vm, 'floating')
         if len(floating_ips) > 0:
             return floating_ips[0]
@@ -425,6 +477,10 @@ class Cluster(object):
         else:
             res.append('    No nodes found')
 
+        if self.frontend:
+            res.append('Endpoints:')
+            res.extend(get_endpoint_instructions(self, self.get_public_ip(self.frontend)))
+
         return res
 
     def generate_ansible_inventory(self):
@@ -435,26 +491,96 @@ class Cluster(object):
         if not self.frontend:
             return lines
 
-        for group in self.config['frontend']['groups']:
-            lines.append('[%s]' % group)
-            name = self.frontend.name
-            ip = oaw.get_addresses(self.frontend)[0]
-            admin_user = self.config['frontend']['admin-user']
-            lines.append('%s ansible_ssh_host=%s ansible_ssh_user=%s' % (name, ip, admin_user))
-            lines.append('')
+        def get_line_for_host(config, vm):
+            name = vm.name
+            ip = oaw.get_addresses(vm)[0]
+            admin_user = config['admin-user']
+            return '%s ansible_ssh_host=%s ansible_ssh_user=%s' % (name, ip, admin_user)
 
-        for group in self.config['node']['groups']:
-            lines.append('[%s]' % group)
-            for node in self.nodes:
-                name = node.name
-                ip = oaw.get_addresses(node)[0]
-                admin_user = self.config['node']['admin-user']
-                lines.append('%s ansible_ssh_host=%s ansible_ssh_user=%s' % (name, ip, admin_user))
+        def get_volume_vars(conf):
+            vol_vars = []
+            if 'volumes' in conf:
+                for vol_spec in conf['volumes']:
+                    if vol_spec['name'] == 'local_data':
+                        if 'device' in vol_spec:
+                            vol_vars.append('local_data_device=%s' % vol_spec['device'])
+                        else:
+                            vol_vars.append('local_data_device=/dev/vdc')
+                    elif vol_spec['name'] == 'shared_data':
+                        if 'device' in vol_spec:
+                            vol_vars.append('shared_data_device=%s' % vol_spec['device'])
+                        else:
+                            vol_vars.append('shared_data_device=/dev/vdd')
+                    else:
+                        print 'WARN: unknown magic volume name %s ' % vol_spec['name']
+            return vol_vars
+
+        # generate frontend groups
+        if 'groups' in self.config['frontend']:
+            for group in self.config['frontend']['groups']:
+                lines.append('[%s]' % group)
+                lines.append(get_line_for_host(self.config['frontend'], self.frontend))
+                lines.append('')
+
+        lines.append('[frontend]')
+        lines.append(get_line_for_host(self.config['frontend'], self.frontend))
+        lines.append('')
+
+        # generate node groups
+        if 'groups' in self.config['node']:
+            for group in self.config['node']['groups']:
+                lines.append('[%s]' % group)
+                for node in self.nodes:
+                    lines.append(get_line_for_host(self.config['node'], node))
+                lines.append('')
+
+        lines.append('[node]')
+        for node in self.nodes:
+            lines.append(get_line_for_host(self.config['node'], node))
+        lines.append('')
+
+        # generate frontend variables
+        lines.append('[frontend:vars]')
+        lines.extend(get_volume_vars(self.config['frontend']))
+        lines.append('')
+
+        # generate node variables
+        lines.append('[node:vars]')
+        lines.extend(get_volume_vars(self.config['node']))
+        lines.append('')
+
+        # generate all groups meta group and define global variables
+        lines.append('[all:children]')
+        lines.append('frontend')
+        lines.append('node')
+        lines.append('')
+
+        lines.append('[all:vars]')
+        lines.append('local_data_dir=/mnt/local_data')
+        lines.append('shared_data_dir=/mnt/shared_data')
 
         return lines
 
     def get_provisioning_log(self):
         return self.__provisioning_log[:]
+
+    def update_firewall(self, rules_file):
+        with open(rules_file, 'r') as rf:
+            rules = [x.strip() for x in rf.readlines()]
+
+        sg_name = self.name + '-ext'
+        print "Updating firewall rules in sec-group %s" % sg_name
+
+        print "    removing old rules"
+        oaw.delete_sec_group_rules(self.nova_client, sg_name)
+        sg = oaw.find_security_group_by_name(self.nova_client, sg_name)
+        for rule in rules:
+            if not len(rule) or rule.startswith('#'):
+                continue
+            print "    adding rule '%s'" % rule
+            proto, from_port, to_port, cidr = rule.strip().split()
+            oaw.add_sec_group_rule(self.nova_client, sg.id, ip_protocol=proto, from_port=from_port,
+                                   to_port=to_port, cidr=cidr)
 
 
 def update_ansible_inventory(cluster):
@@ -469,43 +595,57 @@ def update_ansible_inventory(cluster):
 
 
 def check_connectivity():
-    cmd = "ansible -o --sudo -i ansible-hosts '*' -a 'uname -a'"
+#    cmd = "ansible -o --sudo -i ansible-hosts '*' -a 'uname -a' -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
+    cmd = \
+        "ansible -o -i ansible-hosts '*' -c local -m wait_for " \
+        " -a '" \
+        " port=22" \
+        " host=\"{{ ansible_ssh_host | default(inventory_hostname) }}\"" \
+        " search_regex=OpenSSH " \
+        " timeout=120" \
+        "'"
+    cmd += ' -f %d' % NUM_PARALLEL_ANSIBLE_TASKS
+
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
     print cmd
     while subprocess.call(shlex.split(cmd)) != 0:
         print "    no full connectivity yet, waiting a bit and retrying"
-        time.sleep(10)
+        time.sleep(2)
 
 
 def run_main_playbook():
-    cmd = "ansible-playbook ../ansible/playbooks/site.yml -i ansible-hosts -f 10"
+    cmd = "ansible-playbook ../ansible/playbooks/site.yml -i ansible-hosts -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
     print cmd
-    while subprocess.call(shlex.split(cmd)) != 0:
-        print "    problem detected in running configuration, waiting a bit and retrying."
-        time.sleep(10)
+    res = subprocess.call(shlex.split(cmd))
+    if res:
+        raise RuntimeError('Ansible exited with error code: %d' % res)
 
 
-def run_update_and_reboot():
-    cmd = "ansible-playbook ../ansible/playbooks/update_and_reboot.yml -i ansible-hosts -f 10"
+def run_bootstrap():
+    cmd = "ansible-playbook ../ansible/playbooks/bootstrap.yml -i ansible-hosts -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
     print cmd
-    subprocess.call(shlex.split(cmd))
+    res = subprocess.call(shlex.split(cmd))
+    if res:
+        raise RuntimeError('Ansible exited with error code: %d' % res)
 
 
 def run_add_key(key, user):
     print
     print 'Adding %s to authorized_keys for user %s' % (key, user)
     print
-    cmd = "ansible-playbook ../ansible/playbooks/add_ssh_key.yml -i ansible-hosts -f 10"
+    cmd = "ansible-playbook ../ansible/playbooks/add_ssh_key.yml -i ansible-hosts -f %d" % NUM_PARALLEL_ANSIBLE_TASKS
     cmd += ' --extra-vars "key_user=%s key_file=%s" ' % (user, key)
     if os.path.isfile('key.priv'):
         cmd += ' --private-key key.priv'
     print cmd
-    subprocess.call(shlex.split(cmd))
+    res = subprocess.call(shlex.split(cmd))
+    if res:
+        raise RuntimeError('Ansible exited with error code: %d' % res)
 
 
 def run_configuration():
@@ -525,18 +665,41 @@ def run_first_time_setup():
     print
     check_connectivity()
     print
-    print "When all hosts are up, proceed with a system package update followed by a reboot"
+    print "When all hosts are up, proceed with some bootstrap actions followed by a reboot if necessary"
     print "(this may take a while)"
     print
-    run_update_and_reboot()
+    run_bootstrap()
 
-    print "Sleeping for a while before starting polling the hosts after the reboot"
-    time.sleep(20)
+    print "Sleeping for a while before starting polling the hosts after the bootstrap"
+    time.sleep(3)
     check_connectivity()
     print
     print "Run the main playbook to configure the cluster"
     print
     run_main_playbook()
+
+
+def get_endpoint_instructions(cluster, service_ip):
+    res = []
+    res.append("To ssh in to the the frontend:")
+    res.append("    ssh %s@%s" % (cluster.config['frontend']['admin-user'], service_ip))
+    res.append("")
+    if 'groups' in cluster.config['frontend']:
+        groups = [x for x in cluster.config['frontend']['groups'] if
+                  x in ['spark_master', 'hadoop_namenode', 'hadoop_jobtracker', 'ganglia_master']]
+        if len(groups) > 0:
+            res.append("To check the web interfaces, browse to:")
+            if 'ganglia_master' in groups:
+                res.append("%020s : %s " % ('Ganglia', 'http://%s/ganglia/' % service_ip))
+            if 'hadoop_namenode' in groups:
+                res.append("%020s : %s " % ('Hadoop DFS', 'http://%s:50070/' % service_ip))
+            if 'hadoop_jobtracker' in groups:
+                res.append("%020s : %s " % ('Hadoop Map-Reduce', 'http://%s:50030/' % service_ip))
+            if 'spark_master' in groups:
+                res.append("%020s : %s " % ('Spark', 'http://%s:8080/' % service_ip))
+            res.append("")
+
+    return res
 
 
 def print_usage_instructions(cluster):
@@ -546,16 +709,8 @@ def print_usage_instructions(cluster):
         print "To access the cluster, you need to be able to access it "
         print "from within the project internal network."
         service_ip = cluster.get_private_ip(cluster.frontend)
-
-    print "To ssh in to the the frontend:"
-    print "    ssh %s@%s" % (cluster.config['frontend']['admin-user'], service_ip)
-    print
-    print "To check the web interfaces for Ganglia, Hadoop and Spark, browse to:"
-    print "%020s : %s " % ('Ganglia', 'http://%s/ganglia/' % service_ip)
-    print "%020s : %s " % ('Hadoop DFS', 'http://%s:50070/' % service_ip)
-    print "%020s : %s " % ('Hadoop Map-Reduce', 'http://%s:50030/' % service_ip)
-    print "%020s : %s " % ('Spark', 'http://%s:8080/' % service_ip)
-    print
+    for line in get_endpoint_instructions(cluster, service_ip):
+        print line
     print "See README.rst for examples on testing the installation"
 
 
@@ -566,13 +721,22 @@ def main():
     subparsers = parser.add_subparsers(dest='command')
 
     subparsers.add_parser('up').add_argument(
-        'num_nodes', metavar='num nodes', type=int, help='number of nodes')
+        'num_nodes', metavar='num_nodes', type=int, help='number of nodes')
 
     subparsers.add_parser('add_key').add_argument(
         'key_file', metavar='key_file', type=str, help='public key to upload')
 
+    subparsers.add_parser('update_firewall').add_argument(
+        'rules_file', metavar='rules_file', type=str, help='new set of firewall rules')
+
+    subparsers.add_parser('wipe').add_argument(
+        '--yes_i_know_what_im_doing', action='store_true', help='confirmation option')
+
+    subparsers.add_parser('down').add_argument(
+        '--unclean', action='store_true', help='immediate power off')
+
     # bulk add all the commands without arguments
-    for cmd in 'down', 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup':
+    for cmd in 'info', 'reset_nodes', 'destroy_volumes', 'configure', 'cleanup':
         subparsers.add_parser(cmd)
 
     args = parser.parse_args()
@@ -602,7 +766,7 @@ def main():
             print "Cluster is already running"
             sys.exit(1)
 
-        if not args.num_nodes:
+        if args.num_nodes is None or args.num_nodes < 0:
             print
             print "ERROR: 'up' requires number of nodes as an argument"
             print
@@ -631,12 +795,13 @@ def main():
         print
         print "Shutting cluster down, starting with last nodes"
         print
-        cluster.down()
+        cluster.down(clean_shutdown=(not args.unclean))
         update_ansible_inventory(cluster)
 
     # run ansible configuration scripts on existing cluster
     elif command == 'configure':
         print "Configuring existing cluster with ansible"
+        update_ansible_inventory(cluster)
         run_configuration()
         print_usage_instructions(cluster)
 
@@ -647,6 +812,14 @@ def main():
             kf = os.path.abspath(kf)
 
         run_add_key(kf, cluster.config['frontend']['admin-user'])
+
+    # add admin ssh key to frontend
+    elif command == 'update_firewall':
+        rules_file = args.rules_file
+        if not os.path.isabs(rules_file):
+            rules_file = os.path.abspath(rules_file)
+
+        cluster.update_firewall(rules_file)
 
     # run hard reset on nodes
     elif command == 'reset_nodes':
@@ -665,6 +838,20 @@ def main():
         print
         for line in cluster.get_info():
             print line
+    # wipe all provisioned resources, no questions asked
+    elif command == 'wipe':
+        if not args.yes_i_know_what_im_doing:
+            print
+            print 'ERROR: Confirmation option missing, refusing to wipe'
+            print 'See poutacluster wipe -h'
+            print
+            sys.exit(1)
+
+        print 'Wiping cluster'
+        cluster.down(clean_shutdown=False)
+        cluster.destroy_volumes(grace_time=0)
+        cluster.cleanup()
+        update_ansible_inventory(cluster)
 
     else:
         raise RuntimeError("Unknown command '%s'" % command)

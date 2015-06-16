@@ -1,14 +1,14 @@
 # Ensure that python-apt is installed on a debian/ubuntu machine
-- name: Ensure that package cache is updated
+- name: Ensure that package cache is updated (Ubuntu)
   apt: update_cache=yes cache_valid_time=36000
   when: is_debian_or_ubuntu
 
 - name: Ensure extra repositories are present (Ubuntu)
-  action: apt_repository repo="deb http://archive.ubuntu.com/ubuntu {{ansible_distribution_release}} universe multiverse" state=present
+  apt_repository: repo="deb http://archive.ubuntu.com/ubuntu {{ansible_distribution_release}} universe multiverse" state=present
   when: is_ubuntu
 
-- name: Ensure aptitude packages is installed
-  action: apt name=aptitude state=installed update_cache=yes
+- name: Ensure aptitude package is installed (Ubuntu)
+  apt: name=aptitude state=installed
   when: is_debian_or_ubuntu
   with_items:
     - aptitude

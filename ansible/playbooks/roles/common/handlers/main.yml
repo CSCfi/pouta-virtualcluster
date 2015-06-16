@@ -1,6 +1,7 @@
 ---
+# https://github.com/ansible/ansible-modules-core/issues/1170
 - name: restart ssh
-  action: service name=ssh state=restarted
+  shell: service ssh restart
   when: is_debian_or_ubuntu
 
 - name: restart sshd
@@ -36,3 +37,6 @@
 
 - name: kill-HUP sshd
   shell: pkill -HUP sbin/sshd
+
+- name: reboot
+  command: /sbin/reboot

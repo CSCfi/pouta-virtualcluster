@@ -1,6 +1,6 @@
 ---
 - name: Install ganglia server (Ubuntu)
-  action: apt pkg={{item}} state=latest update_cache=yes
+  apt: name={{item}} state=latest
   with_items:
     - ganglia-monitor
     - ganglia-webfrontend
@@ -10,11 +10,18 @@
     - ganglia
 
 - name: Install ganglia server (CentOS)
-  action: yum pkg={{item}} state=latest
+  yum: name={{item}} state=latest
   with_items:
     - ganglia-gmond
     - ganglia-gmetad
     - ganglia-web
+  when: is_centos
+  tags:
+    - ganglia
+
+# There seems to be a bug in gmetad package for CentOS 6.6
+- name: Fix permissions on /var/lib/ganglia/rrds
+  file: path=/var/lib/ganglia/rrds owner=nobody recurse=yes
   when: is_centos
   tags:
     - ganglia
