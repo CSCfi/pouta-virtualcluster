@@ -19,6 +19,13 @@
   tags:
     - ganglia
 
+# There seems to be a bug in gmetad package for CentOS 6.6
+- name: Fix permissions on /var/lib/ganglia/rrds
+  file: path=/var/lib/ganglia/rrds owner=nobody recurse=yes
+  when: is_centos
+  tags:
+    - ganglia
+
 - name: Configure apache link
   action: file src=/etc/ganglia-webfrontend/apache.conf dest=/etc/apache2/conf.d/ganglia.conf state=link
   notify: restart apache
