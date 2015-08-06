@@ -27,5 +27,5 @@
 # Hadoop/HDFS for map reduce and distributed filesystem
 - include: roles/hadoop.yml
 
-# Spark for next gen map reduce, runs on HDFS
+# Spark for next gen map reduce, runs on HDFS, Has swift objectstroage functionality
 - include: roles/spark.yml
