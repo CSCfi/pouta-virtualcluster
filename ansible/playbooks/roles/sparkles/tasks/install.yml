@@ -1,0 +1,11 @@
+- name: Ensure sparkles directory exists
+  file: path="{{ sparkles_dir }}" state=directory owner=root mode=0777
+
+- name: download Sparkles
+  get_url: url="{{ sparkles_tar_url }}" dest=/tmp/spark-analysis-{{ sparkles_release }}.tar.gz
+
+- name: extract Sparkles
+  command: creates={{ sparkles_dir }}/spark-analysis-{{ sparkles_release }} /bin/tar xfz /tmp/spark-analysis-{{ sparkles_release }}.tar.gz -C {{ sparkles_dir}}
+
+- name: Execute Python Setup Script
+  command: chdir={{ sparkles_dir }}/spark-analysis-{{ sparkles_release }} /usr/bin/python setup.py install

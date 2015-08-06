@@ -1,0 +1,12 @@
+---
+- name: Ensure tmp directory exists
+  file: path="{{ sparkles_tmpdir }}" state=directory owner=root mode=0777
+
+- name: Ensure modules directory exists
+  file: path="{{ sparkles_modsdir }}" state=directory owner=root mode=0777
+
+- name: Ensure etc directory exists
+  file: path="{{ sparkles_etcdir }}" state=directory owner=root mode=0777
+
+- name: copy config.yml.template in etc
+  action: template dest="{{ sparkles_etcdir }}/config.yml.template" src=sparkles/files/config.yml.template owner=root group=root mode=0777

@@ -1,0 +1,15 @@
+---
+- hosts: all
+  name: Configure Spark Analysis Library
+  sudo: yes
+  vars:
+    sparkles_dir: "/shared_data/sparkles"
+    sparkles_tmpdir: "/shared_data/sparkles/tmp"
+    sparkles_modsdir: "/shared_data/sparkles/mods"
+    sparkles_etcdir: "/shared_data/sparkles/etc"
+    sparkles_release: "1.0-beta"
+    sparkles_tar_url: "https://github.com/CSC-IT-Center-for-Science/spark-analysis/archive/v1.0-beta.tar.gz"
+  tasks: 
+    - include: sparkles/tasks/install.yml
+    - include: sparkles/tasks/conf.yml
+

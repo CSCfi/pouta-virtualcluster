@@ -12,6 +12,12 @@
 # common setup for master - slave
 - include: roles/cluster.yml
 
+# External Libraries / Softwares needed for Sparkles
+- include: roles/h5py.yml
+
+# Sparkles Library
+- include: roles/sparkles.yml
+
 # ganglia for monitoring
 - include: roles/ganglia.yml
 

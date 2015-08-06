@@ -1,0 +1,22 @@
+---
+- name: install dependencies
+  apt: pkg="{{ item }}" state=installed update_cache=yes
+  with_items:
+    - git
+    - python-pip
+    - python-dev
+    - libhdf5-dev
+    - sqlite3
+  when: is_debian_or_ubuntu
+
+-  pip: name=Cython
+  
+-  pip: name=numpy
+
+-  pip: name=h5py
+
+-  pip: name=SQLAlchemy
+
+-  pip: name=python-swiftclient version=2.4.0
+
+-  pip: name=python-keystoneclient

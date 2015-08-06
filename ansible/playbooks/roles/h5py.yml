@@ -1,0 +1,7 @@
+---
+- hosts: all
+  name: Install h5py
+  sudo: yes
+  tasks: 
+    - include: h5py/tasks/install.yml
+
