@@ -20,3 +20,5 @@
 -  pip: name=python-swiftclient version=2.4.0
 
 -  pip: name=python-keystoneclient
+
+-  pip: name=hdfs
