@@ -1,5 +1,5 @@
-DATABASE_URI: 'sqlite:////shared_data/etc/sqlite.db'
-DB_LOCATION: '/shared_data/etc/sqlite.db'
-MODULE_LOCAL_STORAGE: '/shared_data/mods/'
+DATABASE_URI: 'sqlite:////shared_data/sparkles/etc/sqlite.db'
+DB_LOCATION: '/shared_data/sparkles/etc/sqlite.db'
+MODULE_LOCAL_STORAGE: '/shared_data/sparkles/mods/'
 CLUSTER_PORT: '7077'
 BACKEND: 'hdfs'
