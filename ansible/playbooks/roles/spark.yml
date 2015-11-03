@@ -3,7 +3,7 @@
   name: Install Spark
   sudo: yes
   vars:
-    spark_version: "1.3.1"
+    spark_version: "1.5.1"
     spark_flavor: "hadoop1"
     tar_url: "http://www.eu.apache.org/dist/spark/spark-{{ spark_version }}/spark-{{ spark_version }}-bin-{{ spark_flavor }}.tgz"
     spark_confdir: "/opt/spark/conf"
