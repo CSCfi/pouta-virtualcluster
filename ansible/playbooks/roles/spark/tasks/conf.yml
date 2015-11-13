@@ -13,9 +13,6 @@
 - name: copy spark-defaults.conf
   action: template dest="{{ spark_confdir }}/spark-defaults.conf" src=spark/files/spark-defaults.conf owner=root group=root mode=0755
 
-- name: copy core-site.xml
-  action: template dest="{{ spark_confdir }}/core-site.xml" src=spark/files/core-site.xml owner=root group=root mode=0755
-
 - name: Ensure spark-jars directory exists
   file: path="{{ spark_sparkjarsdir }}" state=directory owner=root mode=0755
 

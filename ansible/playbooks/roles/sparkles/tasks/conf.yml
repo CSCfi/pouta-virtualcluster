@@ -5,6 +5,12 @@
 - name: Ensure modules directory exists
   file: path="{{ sparkles_modsdir }}" state=directory owner=root mode=0777
 
+- name: Ensure files directory exists
+  file: path="{{ sparkles_filesdir }}" state=directory owner=root mode=0777
+
+- name: Ensure features directory exists
+  file: path="{{ sparkles_featuresdir }}" state=directory owner=root mode=0777
+
 - name: Ensure etc directory exists
   file: path="{{ sparkles_etcdir }}" state=directory owner=root mode=0777
 

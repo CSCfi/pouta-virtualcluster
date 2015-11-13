@@ -6,6 +6,8 @@
     sparkles_dir: "/shared_data/sparkles"
     sparkles_tmpdir: "/shared_data/sparkles/tmp"
     sparkles_modsdir: "/shared_data/sparkles/mods"
+    sparkles_filesdir: "/shared_data/sparkles/files"
+    sparkles_featuresdir: "/shared_data/sparkles/features"
     sparkles_etcdir: "/shared_data/sparkles/etc"
     sparkles_release: "1.0-beta"
     sparkles_tar_url: "https://github.com/CSC-IT-Center-for-Science/spark-analysis/archive/v1.0-beta.tar.gz"

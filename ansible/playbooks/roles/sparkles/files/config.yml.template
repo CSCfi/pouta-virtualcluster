@@ -1,5 +1,9 @@
 DATABASE_URI: 'sqlite:////shared_data/sparkles/etc/sqlite.db'
 DB_LOCATION: '/shared_data/sparkles/etc/sqlite.db'
 MODULE_LOCAL_STORAGE: '/shared_data/sparkles/mods/'
+FILES_LOCAL_STORAGE: '/shared_data/sparkles/files/'
+FEATURES_LOCAL_STORAGE: '/shared_data/sparkles/features/'
 CLUSTER_PORT: '7077'
 BACKEND: 'hdfs'
+IMPORT_PARTITIONS: 32
+SHUFFLE_PARTITIONS: 25
