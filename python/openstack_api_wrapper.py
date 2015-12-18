@@ -25,9 +25,9 @@ def get_clients():
 
 
 def wait_for_state(client, type, instance_id, tgt_state):
-    tgt_states = tgt_state.split('|')
+    tgt_states = tgt_state.lower().split('|')
     while True:
-        cur_state = getattr(client, type).get(instance_id).status
+        cur_state = getattr(client, type).get(instance_id).status.lower()
         if cur_state in tgt_states:
             print '    state now %s' % cur_state
             break
@@ -200,10 +200,10 @@ def wait_for_deletion(client, object_type, instance_id):
 
 
 def shutdown_vm(nova_client, node):
-    if node.status == 'ACTIVE':
+    if node.status.lower() == 'active':
         node.reboot()
-        wait_for_state(nova_client, 'servers', node.id, 'REBOOT|ERROR')
-        wait_for_state(nova_client, 'servers', node.id, 'SHUTOFF|ACTIVE|ERROR')
+        wait_for_state(nova_client, 'servers', node.id, 'reboot|error')
+        wait_for_state(nova_client, 'servers', node.id, 'shutoff|active|error')
         node.stop()
 
 
@@ -267,7 +267,7 @@ def delete_volume_by_id(client, vol_id, wait_for_deletion=False):
             status = ''
             for vol in client.volumes.list():
                 if vol.id == vol_id:
-                    status = vol.status
+                    status = vol.status.lower()
                     break
             time.sleep(10)
 
